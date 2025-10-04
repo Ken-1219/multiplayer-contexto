@@ -83,20 +83,6 @@ export default function Game({ className }: GameProps) {
     }
   }
 
-  const getRankColor = (position: number): string => {
-    if (position <= 300) return "bg-green-600"
-    if (position <= 1000) return "bg-orange-600"
-    if (position <= 3000) return "bg-red-600"
-    return "bg-purple-800"
-  }
-
-  const getRankTextColor = (position: number): string => {
-    if (position <= 300) return "text-green-600"
-    if (position <= 1000) return "text-orange-600"
-    if (position <= 3000) return "text-red-600"
-    return "text-purple-400"
-  }
-
   return (
     <div className={cn("min-h-screen w-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950", className)}>
       {/* Background Pattern */}
@@ -242,12 +228,12 @@ export default function Game({ className }: GameProps) {
             <div className="space-y-3">
               <h3 className="text-xl font-bold text-slate-300 text-center mb-6">Your Guesses</h3>
               {(() => {
-                const sorted = gameState.guesses.slice().sort((a, b) => a.position - b.position)
-                const maxPosition = Math.max(...sorted.map((g) => g.position))
+                const sorted = gameState.guesses.slice().sort((a, b) => a.distance - b.distance)
+                const maxDistance = Math.max(...sorted.map((g) => g.distance))
 
                 return sorted.map((guess, index) => {
                   const isTopGuess = index === 0
-                  const progressPercentage = Math.max(5, Math.min(95, ((maxPosition - guess.position) / maxPosition) * 100))
+                  const progressPercentage = Math.max(5, Math.min(95, ((maxDistance - guess.distance) / maxDistance) * 100))
 
                   let bgColor = "bg-slate-800/60"
                   let borderColor = "border-slate-600/50"
@@ -255,37 +241,37 @@ export default function Game({ className }: GameProps) {
                   let rankColor = "text-slate-400"
                   let progressColor = "from-slate-400/20 to-transparent"
 
-                  if (guess.position <= 10) {
+                  if (guess.distance <= 100) {
                     bgColor = "bg-gradient-to-r from-emerald-500/80 to-emerald-600/60"
                     borderColor = "border-emerald-400/60"
                     textColor = "text-white"
                     rankColor = "text-emerald-100"
                     progressColor = "from-emerald-300/40 to-transparent"
-                  } else if (guess.position <= 50) {
+                  } else if (guess.distance <= 500) {
                     bgColor = "bg-gradient-to-r from-emerald-600/60 to-emerald-700/50"
                     borderColor = "border-emerald-500/40"
                     textColor = "text-emerald-100"
                     rankColor = "text-emerald-200"
                     progressColor = "from-emerald-400/30 to-transparent"
-                  } else if (guess.position <= 100) {
+                  } else if (guess.distance <= 1000) {
                     bgColor = "bg-gradient-to-r from-emerald-700/50 to-emerald-800/40"
                     borderColor = "border-emerald-500/30"
                     textColor = "text-emerald-200"
                     rankColor = "text-emerald-300"
                     progressColor = "from-emerald-400/25 to-transparent"
-                  } else if (guess.position <= 300) {
+                  } else if (guess.distance <= 3000) {
                     bgColor = "bg-gradient-to-r from-yellow-600/50 to-yellow-700/40"
                     borderColor = "border-yellow-500/30"
                     textColor = "text-yellow-200"
                     rankColor = "text-yellow-300"
                     progressColor = "from-yellow-400/20 to-transparent"
-                  } else if (guess.position <= 1000) {
+                  } else if (guess.distance <= 10000) {
                     bgColor = "bg-gradient-to-r from-orange-600/50 to-orange-700/40"
                     borderColor = "border-orange-500/30"
                     textColor = "text-orange-200"
                     rankColor = "text-orange-300"
                     progressColor = "from-orange-400/20 to-transparent"
-                  } else if (guess.position <= 3000) {
+                  } else if (guess.distance <= 30000) {
                     bgColor = "bg-gradient-to-r from-red-600/40 to-red-700/30"
                     borderColor = "border-red-500/25"
                     textColor = "text-red-200"
@@ -304,7 +290,7 @@ export default function Game({ className }: GameProps) {
                       )}
                     >
                       {/* Progress bar for close guesses */}
-                      {guess.position <= 1000 && (
+                      {guess.distance <= 1000 && (
                         <div
                           className={cn("absolute left-0 top-0 bottom-0 bg-gradient-to-r transition-all duration-500", progressColor)}
                           style={{ width: `${progressPercentage}%` }}
@@ -323,7 +309,7 @@ export default function Game({ className }: GameProps) {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={cn("text-sm font-bold px-4 py-2 rounded-md bg-black/30 backdrop-blur-sm", rankColor)}>
-                            #{guess.position}
+                            #{guess.distance}
                           </span>
                         </div>
                       </div>

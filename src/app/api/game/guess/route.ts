@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { calculateWordSimilarity } from '@/lib/word-similarity';
-import { getGameService } from '@/lib/game';
+import { validateWord } from '@/lib/word-validation';
+import { calculateSimilarityWithRank } from '@/lib/enhanced-similarity';
+import { DAILY_WORDS } from '@/lib/game-service';
 
 // Rate limiting configuration
 const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100');
@@ -13,7 +14,7 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
 interface GuessRequest {
   word: string;
-  gameId?: string;
+  gameNumber?: number;
   sessionId?: string;
 }
 
@@ -21,14 +22,32 @@ interface GuessResponse {
   success: boolean;
   data?: {
     word: string;
-    position: number;
+    lemma: string;
+    distance: number;
     similarity: number;
     isCorrect: boolean;
-    gameComplete: boolean;
-    totalGuesses: number;
   };
   error?: string;
   message?: string;
+}
+
+/**
+ * Get the target word for a given game number
+ */
+function getTargetWord(gameNumber: number): string {
+  const index = (gameNumber - 1) % DAILY_WORDS.length;
+  return DAILY_WORDS[index];
+}
+
+/**
+ * Get current game number based on date
+ */
+function getCurrentGameNumber(): number {
+  const today = new Date();
+  const startDate = new Date('2024-01-01');
+  const diffTime = Math.abs(today.getTime() - startDate.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
 }
 
 function getRealIP(request: NextRequest): string {
@@ -72,33 +91,6 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-function validateWord(word: string): { valid: boolean; error?: string } {
-  if (!word || typeof word !== 'string') {
-    return { valid: false, error: 'Word is required and must be a string' };
-  }
-
-  const trimmed = word.trim();
-
-  if (trimmed.length < 2) {
-    return { valid: false, error: 'Word must be at least 2 characters long' };
-  }
-
-  if (trimmed.length > 50) {
-    return { valid: false, error: 'Word must be less than 50 characters' };
-  }
-
-  // Allow only letters, hyphens, and apostrophes
-  const validWordRegex = /^[a-zA-Z\-']+$/;
-  if (!validWordRegex.test(trimmed)) {
-    return {
-      valid: false,
-      error: 'Word can only contain letters, hyphens, and apostrophes',
-    };
-  }
-
-  return { valid: true };
-}
-
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<GuessResponse>> {
@@ -117,15 +109,13 @@ export async function POST(
 
     // Parse request body
     const body: GuessRequest = await request.json();
-    const { word, gameId: _gameId, sessionId: _sessionId } = body;
+    const { word, gameNumber: requestedGameNumber } = body;
 
-    // Validate input
-    const wordValidation = validateWord(word);
-    if (!wordValidation.valid) {
+    if (!word) {
       return NextResponse.json(
         {
           success: false,
-          error: wordValidation.error,
+          error: 'Word is required',
         },
         { status: 400 }
       );
@@ -133,117 +123,114 @@ export async function POST(
 
     const normalizedWord = word.trim().toLowerCase();
 
-    // Get game service instance
-    const gameService = getGameService();
-    const currentGameState = gameService.getGameState();
+    // Validate the word first
+    console.log(`Validating word: "${normalizedWord}"`);
+    const validation = await validateWord(normalizedWord);
 
-    // Check if game is already complete
-    if (currentGameState.isComplete) {
+    if (!validation.isValid) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Game is already complete',
-          data: {
-            word: normalizedWord,
-            position: -1,
-            similarity: 0,
-            isCorrect: false,
-            gameComplete: true,
-            totalGuesses: currentGameState.guesses.length,
-          },
+          error: validation.error || "Word doesn't exist in English dictionary",
         },
         { status: 400 }
       );
     }
 
-    // Check if word was already guessed
-    const existingGuess = currentGameState.guesses.find(
-      (g) => g.word.toLowerCase() === normalizedWord
+    // Get the target word for the game
+    const gameNumber = requestedGameNumber || getCurrentGameNumber();
+    const targetWord = getTargetWord(gameNumber);
+
+    // Get the lemma of the target word (not the guess word!)
+    const targetValidation = await validateWord(targetWord);
+    const targetLemma = targetValidation.lemma || targetWord;
+
+    console.log(
+      `Game #${gameNumber}: Target word is "${targetWord}" (lemma: "${targetLemma}")`
     );
+    console.log(`Guess: "${normalizedWord}" (lemma: "${validation.lemma}")`);
 
-    if (existingGuess) {
+    // Check if the guess is correct (compare with both target word and its lemma)
+    const isCorrect =
+      normalizedWord === targetWord.toLowerCase() ||
+      (validation.lemma &&
+        validation.lemma.toLowerCase() === targetWord.toLowerCase()) ||
+      (validation.lemma &&
+        validation.lemma.toLowerCase() === targetLemma.toLowerCase());
+
+    if (isCorrect) {
+      // Correct answer - distance 0
       return NextResponse.json(
         {
-          success: false,
-          error: 'Word already guessed',
+          success: true,
           data: {
             word: normalizedWord,
-            position: existingGuess.position,
-            similarity: existingGuess.similarity,
-            isCorrect:
-              normalizedWord === currentGameState.secretWord.toLowerCase(),
-            gameComplete: currentGameState.isComplete,
-            totalGuesses: currentGameState.guesses.length,
+            lemma: validation.lemma || normalizedWord,
+            distance: 0,
+            similarity: 1.0,
+            isCorrect: true,
           },
+          message: '🎉 Congratulations! You found the secret word!',
         },
-        { status: 400 }
+        { status: 200 }
       );
     }
 
-    // Calculate similarity using HuggingFace (if available) or fallback
-    let similarity: number;
-    let position: number;
+    // Calculate semantic similarity and rank distance
+    console.log(
+      `Calculating similarity between "${normalizedWord}" and "${targetWord}"`
+    );
 
     try {
-      if (process.env.HUGGINGFACE_API_TOKEN && !process.env.SKIP_API_CALLS) {
-        // Use HuggingFace API for real similarity calculation
-        similarity = await calculateWordSimilarity(
-          normalizedWord,
-          currentGameState.secretWord
-        );
+      const similarityResult = await calculateSimilarityWithRank(
+        normalizedWord,
+        targetWord,
+        targetLemma
+      );
 
-        // Calculate position based on similarity (simplified)
-        const totalVocabulary = 50000;
-        position = Math.max(1, Math.floor((1 - similarity) * totalVocabulary));
-      } else {
-        // Use fallback similarity calculation
-        const guessResult = await gameService.submitGuess(normalizedWord);
-        similarity = guessResult.similarity;
-        position = guessResult.position;
-      }
-    } catch (apiError) {
-      console.error('Error calculating similarity:', apiError);
-
-      // Fallback to game service
-      const guessResult = await gameService.submitGuess(normalizedWord);
-      similarity = guessResult.similarity;
-      position = guessResult.position;
-    }
-
-    // Submit guess to game service
-    const guessResult = await gameService.submitGuess(normalizedWord);
-    const updatedGameState = gameService.getGameState();
-
-    const isCorrect =
-      normalizedWord === currentGameState.secretWord.toLowerCase();
-
-    // Prepare response
-    const responseData = {
-      word: normalizedWord,
-      position: guessResult.position,
-      similarity: guessResult.similarity,
-      isCorrect,
-      gameComplete: updatedGameState.isComplete,
-      totalGuesses: updatedGameState.guesses.length,
-    };
-
-    // Log guess for analytics (optional)
-    if (process.env.NODE_ENV === 'development') {
       console.log(
-        `Guess: "${normalizedWord}" -> Position: ${position}, Similarity: ${(similarity * 100).toFixed(2)}%`
+        `Similarity result: distance=${similarityResult.distance}, similarity=${(similarityResult.similarity * 100).toFixed(2)}%`
+      );
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            word: normalizedWord,
+            lemma: validation.lemma || normalizedWord,
+            distance: similarityResult.distance,
+            similarity: similarityResult.similarity,
+            isCorrect: false,
+          },
+          message: `Position #${similarityResult.distance} (${(similarityResult.similarity * 100).toFixed(1)}% similar)`,
+        },
+        { status: 200 }
+      );
+    } catch (similarityError) {
+      console.error('Error calculating similarity:', similarityError);
+
+      // Fallback: calculate a simple distance based on string similarity
+      const fallbackSimilarity = calculateFallbackSimilarity(
+        normalizedWord,
+        targetWord
+      );
+      const fallbackDistance = Math.floor((1 - fallbackSimilarity) * 10000);
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            word: normalizedWord,
+            lemma: validation.lemma || normalizedWord,
+            distance: Math.max(1, fallbackDistance),
+            similarity: fallbackSimilarity,
+            isCorrect: false,
+          },
+          message: `Position #${Math.max(1, fallbackDistance)} (${(fallbackSimilarity * 100).toFixed(1)}% similar - fallback)`,
+        },
+        { status: 200 }
       );
     }
-
-    return NextResponse.json(
-      {
-        success: true,
-        data: responseData,
-        message: isCorrect
-          ? '🎉 Congratulations! You found the secret word!'
-          : `Position #${position} (${(similarity * 100).toFixed(1)}% similar)`,
-      },
-      { status: 200 }
-    );
   } catch (error) {
     console.error('Error processing guess:', error);
 
@@ -257,45 +244,80 @@ export async function POST(
   }
 }
 
-export async function GET(_request: NextRequest): Promise<NextResponse> {
+/**
+ * Simple fallback similarity calculation using string similarity
+ */
+function calculateFallbackSimilarity(word1: string, word2: string): number {
+  if (word1 === word2) return 1.0;
+
+  // Levenshtein distance-based similarity
+  const maxLength = Math.max(word1.length, word2.length);
+  const distance = levenshteinDistance(word1, word2);
+  const similarity = 1 - distance / maxLength;
+
+  // Add some randomness to simulate semantic similarity
+  const semanticBonus = Math.random() * 0.2;
+  return Math.max(0.1, Math.min(0.9, similarity + semanticBonus));
+}
+
+/**
+ * Calculate Levenshtein distance between two strings
+ */
+function levenshteinDistance(str1: string, str2: string): number {
+  const matrix = [];
+
+  for (let i = 0; i <= str2.length; i++) {
+    matrix[i] = [i];
+  }
+
+  for (let j = 0; j <= str1.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= str2.length; i++) {
+    for (let j = 1; j <= str1.length; j++) {
+      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+
+  return matrix[str2.length][str1.length];
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const gameService = getGameService();
-    const gameState = gameService.getGameState();
-    const stats = gameService.getStats();
+    const url = new URL(request.url);
+    const gameNumber =
+      parseInt(url.searchParams.get('gameNumber') || '0') ||
+      getCurrentGameNumber();
+    const targetWord = getTargetWord(gameNumber);
 
     return NextResponse.json(
       {
         success: true,
         data: {
-          gameNumber: gameState.gameNumber,
-          totalGuesses: gameState.guesses.length,
-          isComplete: gameState.isComplete,
-          isWon: gameState.isWon,
-          guesses: gameState.guesses.map((guess) => ({
-            word: guess.word,
-            position: guess.position,
-            similarity: guess.similarity,
-            timestamp: guess.timestamp,
-          })),
-          stats: {
-            elapsedTime: stats.elapsedTime,
-            bestGuess: stats.bestGuess,
-          },
-          // Only show secret word in development or when game is complete
-          ...(gameState.isComplete || process.env.NODE_ENV === 'development'
-            ? { secretWord: gameState.secretWord }
-            : {}),
+          gameNumber,
+          targetWord:
+            process.env.NODE_ENV === 'development' ? targetWord : undefined,
+          totalWords: DAILY_WORDS.length,
         },
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error getting game state:', error);
+    console.error('Error getting game info:', error);
 
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to get game state',
+        error: 'Failed to get game info',
       },
       { status: 500 }
     );

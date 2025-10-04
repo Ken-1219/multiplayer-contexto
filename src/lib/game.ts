@@ -1,4 +1,4 @@
-import { DAILY_WORDS } from "./game-service";
+import { DAILY_WORDS } from './game-service';
 
 export interface GameState {
   gameNumber: number;
@@ -12,9 +12,11 @@ export interface GameState {
 
 export interface GuessResult {
   word: string;
-  position: number;
+  lemma: string;
+  distance: number;
   similarity: number;
   timestamp: Date;
+  isCorrect: boolean;
 }
 
 export interface GameConfig {
@@ -65,7 +67,7 @@ export class GameService {
 
   private selectSecretWord(gameNumber: number): string {
     // Use game number as seed for consistent daily words
-    const index = gameNumber % this.wordList.length;
+    const index = (gameNumber - 1) % this.wordList.length; // gameNumber starts from 1
     return this.wordList[index];
   }
 
@@ -100,88 +102,71 @@ export class GameService {
       throw new Error('Word already guessed');
     }
 
-    // For now, we'll simulate the similarity calculation
-    // In a real implementation, this would use the word-similarity service
-    const similarity = this.calculateSimularity(
-      normalizedWord,
-      this.gameState.secretWord
-    );
-    const position = this.calculatePosition(normalizedWord, similarity);
+    // Call the API to validate and calculate similarity
+    try {
+      const response = await fetch('/api/game/guess', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          word: normalizedWord,
+          gameNumber: this.gameState.gameNumber,
+        }),
+      });
 
-    const guessResult: GuessResult = {
-      word: normalizedWord,
-      position,
-      similarity,
-      timestamp: new Date(),
-    };
+      const result = await response.json();
 
-    this.gameState.guesses.push(guessResult);
-
-    // Check if the guess is correct
-    if (normalizedWord === this.gameState.secretWord.toLowerCase()) {
-      this.gameState.isComplete = true;
-      this.gameState.isWon = true;
-      this.gameState.endTime = new Date();
-    }
-
-    // Sort guesses by position (best first)
-    this.gameState.guesses.sort((a, b) => a.position - b.position);
-
-    return guessResult;
-  }
-
-  private calculateSimularity(guessedWord: string, secretWord: string): number {
-    // Simplified similarity calculation
-    // In production, this would use the HuggingFace embedding service
-
-    if (guessedWord === secretWord) {
-      return 1.0;
-    }
-
-    // Simple Levenshtein-based similarity as fallback
-    const maxLength = Math.max(guessedWord.length, secretWord.length);
-    const distance = this.levenshteinDistance(guessedWord, secretWord);
-    const similarity = 1 - distance / maxLength;
-
-    // Add some randomness to simulate semantic similarity
-    const semanticBonus = Math.random() * 0.3;
-    return Math.min(Math.max(similarity + semanticBonus, 0), 1);
-  }
-
-  private calculatePosition(word: string, similarity: number): number {
-    // Simulate position based on similarity
-    // Higher similarity = better position (lower number)
-    const totalWords = 50000; // Simulate total vocabulary size
-    const position = Math.floor((1 - similarity) * totalWords) + 1;
-    return Math.max(1, position);
-  }
-
-  private levenshteinDistance(str1: string, str2: string): number {
-    const matrix = [];
-
-    for (let i = 0; i <= str2.length; i++) {
-      matrix[i] = [i];
-    }
-
-    for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= str2.length; i++) {
-      for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
+      if (!response.ok || !result.success) {
+        // Handle specific error cases with user-friendly messages
+        if (result.error && result.error.includes("doesn't exist")) {
+          throw new Error("Word doesn't exist. Please enter a valid word.");
+        }
+        if (result.error && result.error.includes('already guessed')) {
+          throw new Error('Word already guessed. Try a different word.');
+        }
+        if (result.error && result.error.includes('Rate limit')) {
+          throw new Error(
+            'Too many guesses. Please wait a moment and try again.'
           );
         }
-      }
-    }
 
-    return matrix[str2.length][str1.length];
+        throw new Error(result.error || 'Failed to process guess');
+      }
+
+      const guessResult: GuessResult = {
+        word: result.data.word,
+        lemma: result.data.lemma,
+        distance: result.data.distance,
+        similarity: result.data.similarity,
+        timestamp: new Date(),
+        isCorrect: result.data.isCorrect,
+      };
+
+      this.gameState.guesses.push(guessResult);
+
+      // Check if the guess is correct
+      if (result.data.isCorrect) {
+        this.gameState.isComplete = true;
+        this.gameState.isWon = true;
+        this.gameState.endTime = new Date();
+      }
+
+      // Sort guesses by distance (best first - lower distance is better)
+      this.gameState.guesses.sort((a, b) => a.distance - b.distance);
+
+      return guessResult;
+    } catch (error) {
+      console.error('Error submitting guess:', error);
+
+      // If it's already an Error with a message, preserve it
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      // Otherwise, throw a generic error
+      throw new Error('Failed to submit guess. Please try again.');
+    }
   }
 
   public getHint(): string {
@@ -199,19 +184,18 @@ export class GameService {
 
     // Generate hint based on secret word
     const secretWord = this.gameState.secretWord;
-    const hints = [
-      `The word has ${secretWord.length} letters`,
-      `The word starts with "${secretWord[0].toUpperCase()}"`,
-      `The word ends with "${secretWord[secretWord.length - 1]}"`,
-      `The word contains the letter "${secretWord[Math.floor(secretWord.length / 2)]}"`,
+    const hintTypes = [
+      `Starts with: ${secretWord[0].toUpperCase()}`,
+      `Length: ${secretWord.length} letters`,
+      `Contains the letter: ${secretWord[Math.floor(secretWord.length / 2)]}`,
+      `Rhymes with words ending in: ${secretWord.slice(-2)}`,
     ];
 
-    return hints[hintsGiven] || 'No more hints available';
+    return hintTypes[hintsGiven] || 'No more hints available';
   }
 
   public getStats() {
     return {
-      gameNumber: this.gameState.gameNumber,
       totalGuesses: this.gameState.guesses.length,
       isComplete: this.gameState.isComplete,
       isWon: this.gameState.isWon,
@@ -230,7 +214,7 @@ export class GameService {
 
   public getLeaderboard(): GuessResult[] {
     return [...this.gameState.guesses]
-      .sort((a, b) => a.position - b.position)
+      .sort((a, b) => a.distance - b.distance)
       .slice(0, 10); // Top 10 guesses
   }
 
@@ -249,19 +233,19 @@ export class GameService {
     // Show progression of best guesses
     const milestones = [1, 10, 100, 1000];
     const bestGuesses = this.gameState.guesses
-      .filter((g) => milestones.some((m) => g.position <= m))
+      .filter((g) => milestones.some((m) => g.distance <= m))
       .slice(0, 5);
 
     bestGuesses.forEach((guess) => {
       const emoji =
-        guess.position === 1
+        guess.distance === 1
           ? '🎯'
-          : guess.position <= 10
+          : guess.distance <= 10
             ? '🔥'
-            : guess.position <= 100
+            : guess.distance <= 100
               ? '⭐'
               : '✨';
-      result += `${emoji} #${guess.position}: ${guess.word}\n`;
+      result += `${emoji} #${guess.distance}: ${guess.word}\n`;
     });
 
     result += '\nPlay at: contexto-multiplayer.com';
