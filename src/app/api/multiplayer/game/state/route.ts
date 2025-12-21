@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  getGame,
-  getGamePlayers,
-  getGameGuesses,
-} from '@/lib/appsync-client';
+import { getGameState } from '@/lib/appsync-client';
 import {
   type ApiResponse,
   type GameState,
@@ -43,12 +39,11 @@ export async function GET(
       );
     }
 
-    // Fetch game, players, and guesses in parallel
-    const [game, players, guesses] = await Promise.all([
-      getGame(gameId) as Promise<Game | null>,
-      getGamePlayers(gameId) as Promise<GamePlayer[]>,
-      getGameGuesses(gameId) as Promise<Guess[]>,
-    ]);
+    // Fetch game state (game + players + guesses) in a single query
+    const gameState = await getGameState(gameId);
+    const game = gameState?.game as Game | null;
+    const players = (gameState?.players || []) as GamePlayer[];
+    const guesses = (gameState?.guesses || []) as Guess[];
 
     if (!game) {
       return NextResponse.json(
@@ -69,16 +64,10 @@ export async function GET(
     // Sort guesses by distance (closest first)
     const sortedGuesses = [...guesses].sort((a, b) => a.distance - b.distance);
 
-    // Remove secret word from response if game is not completed
-    const gameResponse = { ...game };
-    if (game.status !== 'COMPLETED') {
-      delete (gameResponse as Partial<Game>).secretWord;
-    }
-
     return NextResponse.json({
       success: true,
       data: {
-        game: gameResponse,
+        game,
         players,
         guesses: sortedGuesses,
       },

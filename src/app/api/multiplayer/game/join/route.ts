@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   getGameByRoomCode,
-  getGamePlayers,
+  getGameState,
   joinGame,
   getPlayer,
 } from '@/lib/appsync-client';
@@ -82,7 +82,8 @@ export async function POST(
     }
 
     // Get current players
-    const players = await getGamePlayers(game.gameId) as GamePlayer[];
+    const gameState = await getGameState(game.gameId);
+    const players = (gameState?.players || []) as GamePlayer[];
 
     // Check if player is already in game
     const existingPlayer = players.find((p) => p.playerId === playerId);
@@ -121,7 +122,8 @@ export async function POST(
     }
 
     // Get updated players list
-    const updatedPlayers = await getGamePlayers(game.gameId) as GamePlayer[];
+    const updatedGameState = await getGameState(game.gameId);
+    const updatedPlayers = (updatedGameState?.players || []) as GamePlayer[];
 
     return NextResponse.json({
       success: true,

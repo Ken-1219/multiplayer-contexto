@@ -119,8 +119,7 @@ export default function CreateGamePage() {
             <Select
               aria-label="Turn Duration"
               placeholder="Select duration"
-              defaultSelectedKeys={["60"]}
-              selectedKeys={[turnDuration.toString()]}
+              selectedKeys={new Set([turnDuration.toString()])}
               onSelectionChange={(keys) => {
                 const selected = Array.from(keys)[0];
                 if (selected) setTurnDuration(Number(selected));
@@ -137,6 +136,7 @@ export default function CreateGamePage() {
               {TURN_DURATION_OPTIONS.map((duration) => (
                 <SelectItem
                   key={duration.toString()}
+                  textValue={`${duration} seconds`}
                   className="text-white data-[hover=true]:bg-slate-700 data-[selected=true]:bg-slate-600"
                 >
                   {duration} seconds

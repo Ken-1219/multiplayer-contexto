@@ -131,8 +131,9 @@ export default function WaitingRoomPage() {
   const game = gameState.game;
   const players = gameState.players || [];
   const currentPlayer = players.find(p => p.playerId === player.playerId);
-  const isHost = currentPlayer?.isHost;
-  const allReady = players.length >= 2 && players.every(p => p.isReady || p.isHost);
+  // Determine host by comparing with game.hostPlayerId (more reliable than isHost field)
+  const isHost = player.playerId === game.hostPlayerId;
+  const allReady = players.length >= 2 && players.every(p => p.isReady || p.playerId === game.hostPlayerId);
   const canStart = isHost && allReady && players.length >= 2;
 
   return (
@@ -201,7 +202,7 @@ export default function WaitingRoomPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-white font-medium">{p.nickname}</span>
-                    {p.isHost && (
+                    {p.playerId === game.hostPlayerId && (
                       <Chip size="sm" color="warning" variant="flat">Host</Chip>
                     )}
                     {p.playerId === player.playerId && (
@@ -211,7 +212,7 @@ export default function WaitingRoomPage() {
                 </div>
               </div>
 
-              {p.isReady || p.isHost ? (
+              {p.isReady || p.playerId === game.hostPlayerId ? (
                 <Chip color="success" variant="flat">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  getGame,
-  getGamePlayers,
+  getGameState,
   updateTurn,
 } from '@/lib/appsync-client';
 import {
@@ -41,8 +40,10 @@ export async function POST(
       );
     }
 
-    // Get game
-    const game = await getGame(gameId) as Game | null;
+    // Get game state
+    const gameState = await getGameState(gameId);
+    const game = gameState?.game as Game | null;
+    const players = (gameState?.players || []) as GamePlayer[];
 
     if (!game) {
       return NextResponse.json(
@@ -61,7 +62,6 @@ export async function POST(
 
     // Verify it's the caller's turn (only the current player can timeout their own turn)
     // Or allow anyone in the game to report timeout (for robustness)
-    const players = await getGamePlayers(gameId) as GamePlayer[];
     const isPlayerInGame = players.some(p => p.playerId === playerId);
 
     if (!isPlayerInGame) {

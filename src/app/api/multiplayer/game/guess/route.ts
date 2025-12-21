@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import {
-  getGame,
-  getGamePlayers,
+  getGameState,
   submitGuess,
   updateTurn,
   endGame,
@@ -63,8 +62,10 @@ export async function POST(
       );
     }
 
-    // Get game
-    const game = await getGame(gameId) as Game | null;
+    // Get game state
+    const gameStateResult = await getGameState(gameId);
+    const game = gameStateResult?.game as Game | null;
+    const players = (gameStateResult?.players || []) as GamePlayer[];
 
     if (!game) {
       return NextResponse.json(
@@ -80,9 +81,6 @@ export async function POST(
         { status: 400 }
       );
     }
-
-    // Get players
-    const players = await getGamePlayers(gameId) as GamePlayer[];
 
     // Verify player is in game
     const player = players.find((p) => p.playerId === playerId);

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  getGame,
-  getGamePlayers,
-  getGameGuesses,
+  getGameState,
   startGame,
 } from '@/lib/appsync-client';
 import {
@@ -43,8 +41,11 @@ export async function POST(
       );
     }
 
-    // Get game
-    const game = await getGame(gameId) as Game | null;
+    // Get game state
+    const gameStateResult = await getGameState(gameId);
+    const game = gameStateResult?.game as Game | null;
+    const players = (gameStateResult?.players || []) as GamePlayer[];
+    const guesses = (gameStateResult?.guesses || []) as Guess[];
 
     if (!game) {
       return NextResponse.json(
@@ -68,9 +69,6 @@ export async function POST(
         { status: 400 }
       );
     }
-
-    // Get players
-    const players = await getGamePlayers(gameId) as GamePlayer[];
 
     // Verify minimum players (2 for competitive)
     if (players.length < 2) {
@@ -99,16 +97,12 @@ export async function POST(
       );
     }
 
-    // Get guesses (should be empty at start)
-    const guesses = await getGameGuesses(gameId) as Guess[];
-
-    // Build response (hide secret word)
+    // Build response
     const gameResponse = {
       ...game,
       ...updatedGame,
       status: 'ACTIVE' as const,
     };
-    delete (gameResponse as Partial<Game>).secretWord;
 
     return NextResponse.json({
       success: true,

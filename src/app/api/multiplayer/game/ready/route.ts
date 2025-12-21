@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  getGame,
-  getGamePlayers,
+  getGameState,
   setPlayerReady,
 } from '@/lib/appsync-client';
 import {
@@ -47,8 +46,10 @@ export async function POST(
       );
     }
 
-    // Get game to verify status
-    const game = await getGame(gameId) as Game | null;
+    // Get game state to verify status
+    const gameStateResult = await getGameState(gameId);
+    const game = gameStateResult?.game as Game | null;
+    const players = (gameStateResult?.players || []) as GamePlayer[];
 
     if (!game) {
       return NextResponse.json(
@@ -64,8 +65,7 @@ export async function POST(
       );
     }
 
-    // Get players to verify player is in game
-    const players = await getGamePlayers(gameId) as GamePlayer[];
+    // Verify player is in game
     const player = players.find((p) => p.playerId === playerId);
 
     if (!player) {

@@ -98,34 +98,61 @@ export async function executeGraphQL<T = unknown>(
 // ============================================================================
 
 /**
- * Get a game by its ID
+ * Get complete game state (game + players + guesses) in a single query
  */
-export async function getGame(gameId: string) {
+export async function getGameState(gameId: string) {
   const query = `
-    query GetGame($gameId: ID!) {
-      getGame(gameId: $gameId) {
-        gameId
-        roomCode
-        secretWord
-        gameMode
-        status
-        currentTurnPlayerId
-        turnNumber
-        turnDuration
-        maxPlayers
-        isPublic
-        hostPlayerId
-        winnerId
-        playerCount
-        createdAt
-        startedAt
-        endedAt
+    query GetGameState($gameId: ID!) {
+      getGameState(gameId: $gameId) {
+        game {
+          gameId
+          roomCode
+          secretWord
+          gameMode
+          status
+          currentTurnPlayerId
+          turnNumber
+          turnDuration
+          maxPlayers
+          isPublic
+          hostPlayerId
+          winnerId
+          playerCount
+          createdAt
+          startedAt
+          endedAt
+        }
+        players {
+          gameId
+          playerId
+          nickname
+          avatarColor
+          joinOrder
+          isReady
+          isHost
+          isConnected
+          score
+          guessCount
+          foundWord
+        }
+        guesses {
+          gameId
+          guessId
+          playerId
+          playerNickname
+          word
+          distance
+          similarity
+          isCorrect
+          turnNumber
+          timestamp
+        }
       }
     }
   `;
 
-  const result = await executeGraphQL<{ getGame: unknown }>(query, { gameId });
-  return result.getGame;
+  const result = await executeGraphQL<{ getGameState: { game: unknown; players: unknown[]; guesses: unknown[] } }>(query, { gameId });
+  return result.getGameState;
 }
 
 /**
@@ -137,7 +164,6 @@ export async function getGameByRoomCode(roomCode: string) {
       getGameByRoomCode(roomCode: $roomCode) {
         gameId
         roomCode
-        secretWord
         gameMode
         status
         currentTurnPlayerId
@@ -159,55 +185,6 @@ export async function getGameByRoomCode(roomCode: string) {
   return result.getGameByRoomCode;
 }
 
-/**
- * Get players in a game
- */
-export async function getGamePlayers(gameId: string) {
-  const query = `
-    query GetGamePlayers($gameId: ID!) {
-      getGamePlayers(gameId: $gameId) {
-        gameId
-        playerId
-        nickname
-        avatarColor
-        joinOrder
-        isReady
-        isHost
-        isConnected
-        score
-        guessCount
-      }
-    }
-  `;
-
-  const result = await executeGraphQL<{ getGamePlayers: unknown[] }>(query, { gameId });
-  return result.getGamePlayers;
-}
-
-/**
- * Get guesses in a game
- */
-export async function getGameGuesses(gameId: string) {
-  const query = `
-    query GetGameGuesses($gameId: ID!) {
-      getGameGuesses(gameId: $gameId) {
-        gameId
-        guessId
-        playerId
-        playerNickname
-        word
-        distance
-        similarity
-        isCorrect
-        turnNumber
-        timestamp
-      }
-    }
-  `;
-
-  const result = await executeGraphQL<{ getGameGuesses: unknown[] }>(query, { gameId });
-  return result.getGameGuesses;
-}
 
 /**
  * Get a player by ID
@@ -537,17 +514,8 @@ export async function endGame(
 
 /**
  * Get full game state (game + players + guesses)
+ * This is now an alias for getGameState which returns everything in a single query
  */
 export async function getFullGameState(gameId: string) {
-  const [game, players, guesses] = await Promise.all([
-    getGame(gameId),
-    getGamePlayers(gameId),
-    getGameGuesses(gameId),
-  ]);
-
-  return {
-    game,
-    players,
-    guesses,
-  };
+  return getGameState(gameId);
 }
