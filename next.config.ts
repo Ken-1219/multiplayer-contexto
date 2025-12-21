@@ -95,17 +95,6 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Redirects for SEO and user experience
-  async redirects() {
-    return [
-      {
-        source: '/play',
-        destination: '/',
-        permanent: true,
-      },
-    ];
-  },
-
   // Compress responses
   compress: true,
 

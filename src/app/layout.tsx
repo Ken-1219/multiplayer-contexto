@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { NextUIProviders } from '@/providers/nextui-provider';
+import { MultiplayerProvider } from '@/contexts/MultiplayerContext';
+import { Toaster } from 'sonner';
 import './globals.css';
 
 const geistSans = Geist({
@@ -91,7 +93,20 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased dark:bg-slate-900 dark:text-white`}
       >
         <NextUIProviders>
-          <div id="root">{children}</div>
+          <MultiplayerProvider>
+            <div id="root">{children}</div>
+            <Toaster
+              position="top-center"
+              toastOptions={{
+                style: {
+                  background: '#1e293b',
+                  color: '#f8fafc',
+                  border: '1px solid #334155',
+                },
+              }}
+              richColors
+            />
+          </MultiplayerProvider>
         </NextUIProviders>
       </body>
     </html>
