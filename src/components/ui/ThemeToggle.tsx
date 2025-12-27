@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Palette, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useTheme, themes, type ThemeType } from '@/contexts/ThemeContext';
 
-const themeOptions: { id: ThemeType; icon: string }[] = [
-  { id: 'emerald', icon: '🌿' },
-  { id: 'purple', icon: '💜' },
-  { id: 'ocean', icon: '🌊' },
-  { id: 'charcoal', icon: '🌑' },
+const themeOptions: { id: ThemeType }[] = [
+  { id: 'emerald' },
+  { id: 'purple' },
+  { id: 'ocean' },
+  { id: 'charcoal' },
 ];
 
 export default function ThemeToggle() {
@@ -22,15 +22,18 @@ export default function ThemeToggle() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer"
         style={{
           backgroundColor: colors.cardBg,
           border: `1px solid ${colors.cardBorder}`,
         }}
       >
-        <Palette
-          className="w-4 h-4"
-          style={{ color: colors.primary }}
+        <div
+          className="w-4 h-4 rounded-full"
+          style={{
+            background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
+            boxShadow: `0 0 8px ${colors.primary}50`,
+          }}
         />
         <span
           className="text-sm font-medium hidden sm:inline"
@@ -74,7 +77,7 @@ export default function ThemeToggle() {
                     setTheme(option.id);
                     setIsOpen(false);
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group cursor-pointer"
                   style={{
                     backgroundColor: theme === option.id ? themes[option.id].cardBg : 'transparent',
                   }}
@@ -83,7 +86,14 @@ export default function ThemeToggle() {
                     x: 2,
                   }}
                 >
-                  <span className="text-lg">{option.icon}</span>
+                  {/* Theme color indicator */}
+                  <div
+                    className="w-5 h-5 rounded-full flex-shrink-0"
+                    style={{
+                      background: `linear-gradient(135deg, ${themes[option.id].primary}, ${themes[option.id].accent})`,
+                      boxShadow: theme === option.id ? `0 0 10px ${themes[option.id].primary}60` : 'none',
+                    }}
+                  />
                   <span
                     className="text-sm font-medium flex-1 text-left"
                     style={{
@@ -106,11 +116,6 @@ export default function ThemeToggle() {
                       />
                     </motion.div>
                   )}
-                  {/* Color preview dot */}
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: themes[option.id].primary }}
-                  />
                 </motion.button>
               ))}
             </motion.div>

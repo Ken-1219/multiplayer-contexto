@@ -454,7 +454,7 @@ export default function Game({ className }: GameProps) {
             <GlassCard className="overflow-hidden">
               <motion.button
                 onClick={() => setShowHowToPlay(!showHowToPlay)}
-                className="w-full flex items-center justify-between p-5 transition-all duration-300"
+                className="w-full flex items-center justify-between p-5 transition-all duration-300 cursor-pointer"
                 whileHover={{ backgroundColor: 'rgba(255,255,255,0.02)' }}
               >
                 <div className="flex items-center gap-3">

@@ -241,7 +241,7 @@ export default function WaitingRoomPage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleCopyCode}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-lg tracking-wider"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-lg tracking-wider cursor-pointer"
             style={{
               backgroundColor: colors.cardBg,
               border: `1px solid ${colors.cardBorder}`,

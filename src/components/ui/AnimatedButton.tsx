@@ -84,7 +84,7 @@ export default function AnimatedButton({
         'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent',
         sizeStyles[size],
         fullWidth && 'w-full',
-        (disabled || isLoading) && 'opacity-50 cursor-not-allowed',
+        (disabled || isLoading) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
         className
       )}
       style={{

@@ -228,7 +228,7 @@ export default function CreateGamePage() {
                     <motion.button
                       key={duration}
                       onClick={() => setTurnDuration(duration)}
-                      className="py-3 px-2 rounded-xl text-center font-medium transition-all"
+                      className="py-3 px-2 rounded-xl text-center font-medium transition-all cursor-pointer"
                       style={{
                         backgroundColor:
                           turnDuration === duration
@@ -281,7 +281,7 @@ export default function CreateGamePage() {
                 </div>
                 <motion.button
                   onClick={() => setIsPublic(!isPublic)}
-                  className="w-14 h-8 rounded-full p-1 transition-colors"
+                  className="w-14 h-8 rounded-full p-1 transition-colors cursor-pointer"
                   style={{
                     backgroundColor: isPublic ? colors.primary : colors.inputBorder,
                   }}

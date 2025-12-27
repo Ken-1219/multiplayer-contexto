@@ -160,7 +160,7 @@ export default function MultiplayerLobbyPage() {
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ delay: index * 0.03 }}
                         onClick={() => setSelectedColor(color)}
-                        className="w-8 h-8 rounded-full transition-all"
+                        className="w-8 h-8 rounded-full transition-all cursor-pointer"
                         style={{
                           backgroundColor: color,
                           boxShadow: selectedColor === color
