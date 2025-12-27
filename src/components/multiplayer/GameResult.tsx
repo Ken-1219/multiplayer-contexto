@@ -2,9 +2,9 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
-import { type GamePlayer } from '@/types/multiplayer';
+import { type GamePlayer, type GameEndReason } from '@/types/multiplayer';
 import AnimatedButton from '@/components/ui/AnimatedButton';
-import { Trophy, Frown, LogOut } from 'lucide-react';
+import { Trophy, Frown, LogOut, Flag } from 'lucide-react';
 
 interface GameResultProps {
   isOpen: boolean;
@@ -13,6 +13,9 @@ interface GameResultProps {
   secretWord: string;
   myGuessCount: number;
   opponentGuessCount: number;
+  opponentName?: string;
+  endReason?: GameEndReason;
+  didIForfeit?: boolean;
   onExit: () => void;
 }
 
@@ -48,11 +51,89 @@ export default function GameResult({
   secretWord,
   myGuessCount,
   opponentGuessCount,
+  opponentName,
+  endReason,
+  didIForfeit,
   onExit,
 }: GameResultProps) {
   const { colors } = useTheme();
 
   const confettiColors = [colors.primary, colors.accent, colors.warning, '#ec4899', '#8b5cf6'];
+
+  // Determine the result message based on the scenario
+  const getResultContent = () => {
+    // Player forfeited (gave up)
+    if (didIForfeit) {
+      return {
+        icon: <Flag className="w-20 h-20 mx-auto" style={{ color: colors.warning }} />,
+        title: 'You Gave Up',
+        titleColor: colors.warning,
+        subtitle: 'Better luck next time!',
+        showConfetti: false,
+        iconAnimation: { rotate: [0, -10, 10, -10, 0] },
+      };
+    }
+
+    // Won because opponent forfeited
+    if (isWinner && endReason === 'FORFEIT') {
+      return {
+        icon: <Trophy className="w-20 h-20 mx-auto" style={{ color: colors.warning }} />,
+        title: 'You Win!',
+        titleColor: colors.primary,
+        subtitle: `${opponentName || 'Your opponent'} gave up!`,
+        showConfetti: true,
+        iconAnimation: { y: [0, -10, 0] },
+      };
+    }
+
+    // Won by finding the word
+    if (isWinner) {
+      return {
+        icon: <Trophy className="w-20 h-20 mx-auto" style={{ color: colors.warning }} />,
+        title: 'You Win!',
+        titleColor: colors.primary,
+        subtitle: 'Congratulations! You found the word!',
+        showConfetti: true,
+        iconAnimation: { y: [0, -10, 0] },
+      };
+    }
+
+    // Lost because opponent found the word
+    if (endReason === 'WORD_FOUND' || !endReason) {
+      return {
+        icon: <Frown className="w-20 h-20 mx-auto" style={{ color: colors.error }} />,
+        title: 'You Lost',
+        titleColor: colors.error,
+        subtitle: `${winner?.nickname || 'Your opponent'} found the word first!`,
+        showConfetti: false,
+        iconAnimation: { x: [-2, 2, -2, 2, 0] },
+      };
+    }
+
+    // Lost because of timeout
+    if (endReason === 'TIMEOUT') {
+      return {
+        icon: <Frown className="w-20 h-20 mx-auto" style={{ color: colors.error }} />,
+        title: 'Time Out!',
+        titleColor: colors.error,
+        subtitle: 'You ran out of time!',
+        showConfetti: false,
+        iconAnimation: { x: [-2, 2, -2, 2, 0] },
+      };
+    }
+
+    // Default lost state
+    return {
+      icon: <Frown className="w-20 h-20 mx-auto" style={{ color: colors.error }} />,
+      title: 'You Lost',
+      titleColor: colors.error,
+      subtitle: `${winner?.nickname || 'Your opponent'} won the game!`,
+      showConfetti: false,
+      iconAnimation: { x: [-2, 2, -2, 2, 0] },
+    };
+  };
+
+  const result = getResultContent();
 
   return (
     <AnimatePresence>
@@ -65,7 +146,7 @@ export default function GameResult({
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
         >
           {/* Confetti for winner */}
-          {isWinner && (
+          {result.showConfetti && (
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               {Array.from({ length: 30 }).map((_, i) => (
                 <div key={i} className="absolute top-0" style={{ left: `${(i / 30) * 100}%` }}>
@@ -88,66 +169,45 @@ export default function GameResult({
             style={{
               backgroundColor: 'rgba(0, 0, 0, 0.6)',
               border: `1px solid ${colors.cardBorder}`,
-              boxShadow: `0 0 40px ${isWinner ? colors.accentGlow : 'rgba(0,0,0,0.5)'}`,
+              boxShadow: `0 0 40px ${result.showConfetti ? colors.accentGlow : 'rgba(0,0,0,0.5)'}`,
             }}
           >
             {/* Glow effect */}
             <div
               className="absolute inset-0 opacity-20"
               style={{
-                background: `radial-gradient(circle at center, ${isWinner ? colors.primary : colors.error} 0%, transparent 70%)`,
+                background: `radial-gradient(circle at center, ${result.titleColor} 0%, transparent 70%)`,
               }}
             />
 
             <div className="relative z-10 text-center space-y-6">
               {/* Result Icon & Text */}
-              {isWinner ? (
+              <motion.div
+                initial={{ scale: 0, rotate: didIForfeit ? 0 : -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
+              >
                 <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
+                  animate={result.iconAnimation}
+                  transition={{
+                    duration: didIForfeit ? 0.5 : 2,
+                    repeat: didIForfeit ? 0 : Infinity,
+                    delay: didIForfeit ? 0.5 : 0,
+                  }}
+                  className="text-7xl mb-4"
                 >
-                  <motion.div
-                    animate={{ y: [0, -10, 0] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="text-7xl mb-4"
-                  >
-                    <Trophy className="w-20 h-20 mx-auto" style={{ color: colors.warning }} />
-                  </motion.div>
-                  <h2
-                    className="text-4xl font-black"
-                    style={{ color: colors.primary }}
-                  >
-                    You Win!
-                  </h2>
-                  <p className="mt-2" style={{ color: colors.textSecondary }}>
-                    Congratulations! You found the word!
-                  </p>
+                  {result.icon}
                 </motion.div>
-              ) : (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
+                <h2
+                  className="text-4xl font-black"
+                  style={{ color: result.titleColor }}
                 >
-                  <motion.div
-                    animate={{ x: [-2, 2, -2, 2, 0] }}
-                    transition={{ duration: 0.5, delay: 0.5 }}
-                    className="text-7xl mb-4"
-                  >
-                    <Frown className="w-20 h-20 mx-auto" style={{ color: colors.error }} />
-                  </motion.div>
-                  <h2
-                    className="text-4xl font-black"
-                    style={{ color: colors.error }}
-                  >
-                    You Lost
-                  </h2>
-                  <p className="mt-2" style={{ color: colors.textSecondary }}>
-                    {winner?.nickname || 'Your opponent'} found the word first!
-                  </p>
-                </motion.div>
-              )}
+                  {result.title}
+                </h2>
+                <p className="mt-2" style={{ color: colors.textSecondary }}>
+                  {result.subtitle}
+                </p>
+              </motion.div>
 
               {/* Secret Word */}
               <motion.div
@@ -200,7 +260,7 @@ export default function GameResult({
                   style={{ backgroundColor: colors.cardBg }}
                 >
                   <p className="text-sm" style={{ color: colors.textMuted }}>
-                    Opponent
+                    {opponentName || 'Opponent'}
                   </p>
                   <p
                     className="text-3xl font-bold"

@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Sparkles, Home, Flag } from 'lucide-react';
 import { useMultiplayer } from '@/contexts/MultiplayerContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { type GameEndReason, type GameState } from '@/types/multiplayer';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import GlassCard from '@/components/ui/GlassCard';
 import GuessItem from '@/components/ui/GuessItem';
@@ -39,6 +40,8 @@ export default function MultiplayerGamePage() {
   const [localError, setLocalError] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [didIForfeit, setDidIForfeit] = useState(false);
+  const [forfeitGameData, setForfeitGameData] = useState<GameState | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Redirect if no player
@@ -98,7 +101,10 @@ export default function MultiplayerGamePage() {
     );
   }
 
-  if (!gameState?.game) {
+  // Use forfeitGameData when player forfeited (since gameState gets cleared)
+  const activeGameState = gameState || forfeitGameData;
+
+  if (!activeGameState?.game) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -122,9 +128,9 @@ export default function MultiplayerGamePage() {
     );
   }
 
-  const game = gameState.game;
-  const players = gameState.players || [];
-  const guesses = gameState.guesses || [];
+  const game = activeGameState.game;
+  const players = activeGameState.players || [];
+  const guesses = activeGameState.guesses || [];
 
   const currentPlayer = players.find(p => p.playerId === player.playerId);
   const opponent = players.find(p => p.playerId !== player.playerId);
@@ -170,8 +176,13 @@ export default function MultiplayerGamePage() {
 
   const handleLeaveGame = async () => {
     if (confirm('Are you sure you want to leave? You will forfeit the game.')) {
+      // Store game data before leaving (since leaveGame clears gameState)
+      if (gameState) {
+        setForfeitGameData(gameState);
+      }
+      setDidIForfeit(true);
+      setShowResult(true);
       await leaveGame();
-      router.push('/multiplayer');
     }
   };
 
@@ -181,7 +192,25 @@ export default function MultiplayerGamePage() {
     router.push('/multiplayer');
   };
 
-  const isWinner = game.winnerId === player.playerId;
+  // If player forfeited, they are definitely not the winner
+  const isWinner = didIForfeit ? false : game.winnerId === player.playerId;
+
+  // Determine the end reason
+  const getEndReason = (): GameEndReason | undefined => {
+    // If player forfeited, always return FORFEIT
+    if (didIForfeit) return 'FORFEIT';
+
+    if (game.status !== 'COMPLETED') return undefined;
+
+    // Check if anyone found the word
+    const someoneFoundWord = guesses.some(g => g.isCorrect);
+
+    if (someoneFoundWord) return 'WORD_FOUND';
+    // If game ended but nobody found the word, opponent must have forfeited
+    return 'FORFEIT';
+  };
+
+  const endReason = getEndReason();
 
   return (
     <motion.div
@@ -454,6 +483,9 @@ export default function MultiplayerGamePage() {
         secretWord={game.secretWord}
         myGuessCount={myGuesses.length}
         opponentGuessCount={opponentGuesses.length}
+        opponentName={opponent?.nickname}
+        endReason={endReason}
+        didIForfeit={didIForfeit}
         onExit={handleExit}
       />
     </motion.div>

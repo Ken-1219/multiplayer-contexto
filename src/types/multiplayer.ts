@@ -13,6 +13,8 @@ export type GameMode = 'COMPETITIVE' | 'RACE' | 'COOPERATIVE';
 
 export type GameStatus = 'WAITING' | 'ACTIVE' | 'COMPLETED' | 'ABANDONED';
 
+export type GameEndReason = 'WORD_FOUND' | 'FORFEIT' | 'TIMEOUT' | 'DISCONNECT';
+
 export type PlayerStatus = 'ONLINE' | 'OFFLINE' | 'IN_GAME';
 
 // ============================================================================
