@@ -62,19 +62,27 @@ export default function MultiplayerLobbyPage() {
                 aria-label="Nickname"
                 placeholder="Enter your nickname"
                 value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
+                onChange={(e) => {
+                  setNickname(e.target.value);
+                  setNicknameError(null);
+                }}
                 maxLength={20}
                 isInvalid={!!nicknameError}
                 errorMessage={nicknameError}
                 variant="bordered"
                 classNames={{
                   input: 'text-white',
-                  inputWrapper: 'bg-slate-700/50 border-slate-600 hover:bg-slate-700 data-[hover=true]:bg-slate-700',
+                  inputWrapper: `bg-slate-700/50 border-slate-600 hover:bg-slate-700 data-[hover=true]:bg-slate-700 ${nicknameError ? 'border-red-500' : ''}`,
+                  errorMessage: 'text-red-400',
                 }}
               />
-              <p className="text-xs text-slate-500 mt-1">
-                2-20 characters, letters, numbers, underscores, hyphens only
-              </p>
+              {nicknameError ? (
+                <p className="text-xs text-red-400 mt-1">{nicknameError}</p>
+              ) : (
+                <p className="text-xs text-slate-500 mt-1">
+                  2-20 characters, letters, numbers, underscores, hyphens only
+                </p>
+              )}
             </div>
 
             {/* Avatar Color Selection */}
