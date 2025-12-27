@@ -635,6 +635,13 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     setError(null);
   }, []);
 
+  // Clear game state and session (used when game ends)
+  const clearGameState = useCallback(() => {
+    stopPolling();
+    setGameState(null);
+    clearSession();
+  }, [stopPolling]);
+
   const value: MultiplayerContextType = {
     player,
     gameState,
@@ -650,6 +657,7 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     refreshGameState,
     handleTimeout,
     clearError,
+    clearGameState,
   };
 
   return (

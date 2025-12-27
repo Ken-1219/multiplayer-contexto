@@ -24,6 +24,7 @@ export default function MultiplayerGamePage() {
     refreshGameState,
     handleTimeout,
     clearError,
+    clearGameState,
   } = useMultiplayer();
 
   const [guessInput, setGuessInput] = useState('');
@@ -131,11 +132,13 @@ export default function MultiplayerGamePage() {
 
   const handlePlayAgain = () => {
     setShowResult(false);
+    clearGameState();
     router.push('/multiplayer');
   };
 
   const handleExit = () => {
     setShowResult(false);
+    clearGameState();
     router.push('/');
   };
 

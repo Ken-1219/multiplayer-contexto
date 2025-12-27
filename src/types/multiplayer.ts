@@ -247,6 +247,7 @@ export interface MultiplayerActions {
   refreshGameState: () => Promise<void>;
   handleTimeout: () => Promise<void>;
   clearError: () => void;
+  clearGameState: () => void;
 }
 
 /**
