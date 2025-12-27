@@ -148,27 +148,24 @@ export default function MultiplayerLobbyPage() {
         <p className="text-slate-400">Create a new game or join an existing one</p>
       </div>
 
-      <div className="w-full max-w-md space-y-4">
+      <div className="w-full max-w-2xl flex flex-row gap-4">
         {/* Create Game */}
         <Card
           isPressable
           onPress={() => router.push('/multiplayer/create')}
-          className="bg-slate-800/50 border border-slate-700 hover:border-blue-500 transition-all"
+          className="flex-1 bg-slate-800/50 border border-slate-700 hover:border-blue-500 transition-all"
         >
           <CardBody className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
               </div>
-              <div className="flex-1">
+              <div>
                 <h2 className="text-xl font-semibold text-white">Create Game</h2>
-                <p className="text-slate-400 text-sm">Host a new room and invite a friend</p>
+                <p className="text-slate-400 text-sm mt-1">Host a new room and invite a friend</p>
               </div>
-              <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
             </div>
           </CardBody>
         </Card>
@@ -177,22 +174,19 @@ export default function MultiplayerLobbyPage() {
         <Card
           isPressable
           onPress={() => router.push('/multiplayer/join')}
-          className="bg-slate-800/50 border border-slate-700 hover:border-emerald-500 transition-all"
+          className="flex-1 bg-slate-800/50 border border-slate-700 hover:border-emerald-500 transition-all"
         >
           <CardBody className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                 </svg>
               </div>
-              <div className="flex-1">
+              <div>
                 <h2 className="text-xl font-semibold text-white">Join Game</h2>
-                <p className="text-slate-400 text-sm">Enter a room code to join</p>
+                <p className="text-slate-400 text-sm mt-1">Enter a room code to join</p>
               </div>
-              <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
             </div>
           </CardBody>
         </Card>
