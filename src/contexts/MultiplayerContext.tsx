@@ -321,6 +321,91 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     }
   }, []);
 
+  // Update profile
+  const updateProfile = useCallback(async (nickname?: string, avatarColor?: string) => {
+    if (!player) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/multiplayer/player/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nickname,
+          avatarColor,
+          // Include gameId if in an active game for real-time sync
+          gameId: gameState?.game?.gameId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to update profile');
+      }
+
+      // Update local player state
+      setPlayer(data.data);
+
+      // Also update player info in local game state if in a game
+      if (gameState?.game?.gameId) {
+        setGameState((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            players: prev.players.map((p) =>
+              p.playerId === player.playerId
+                ? {
+                    ...p,
+                    nickname: nickname || p.nickname,
+                    avatarColor: avatarColor || p.avatarColor,
+                  }
+                : p
+            ),
+          };
+        });
+      }
+
+      toast.success('Profile updated!');
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to update profile';
+      setError(message);
+      toast.error(message);
+      throw e;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [player, gameState?.game?.gameId]);
+
+  // Logout
+  const logout = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await fetch('/api/multiplayer/player/logout', {
+        method: 'POST',
+      });
+
+      // Clear all local state
+      stopPolling();
+      setPlayer(null);
+      setGameState(null);
+      clearSession();
+
+      toast.success('Logged out successfully');
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to logout';
+      setError(message);
+      toast.error(message);
+      throw e;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [stopPolling]);
+
   // Create game
   const createGame = useCallback(async (options: CreateGameInput): Promise<string> => {
     setIsLoading(true);
@@ -655,6 +740,8 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     isInitialized,
     error,
     createPlayer,
+    updateProfile,
+    logout,
     createGame,
     joinGame,
     leaveGame,

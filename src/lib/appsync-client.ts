@@ -264,6 +264,70 @@ export async function createPlayer(
 }
 
 /**
+ * Update an existing player's profile (nickname and/or avatar color)
+ */
+export async function updatePlayer(
+  playerId: string,
+  updates: { nickname?: string; avatarColor?: string }
+) {
+  const mutation = `
+    mutation UpdatePlayer($playerId: ID!, $nickname: String, $avatarColor: String) {
+      updatePlayer(playerId: $playerId, nickname: $nickname, avatarColor: $avatarColor) {
+        playerId
+        nickname
+        avatarColor
+        totalGames
+        totalWins
+        createdAt
+      }
+    }
+  `;
+
+  const result = await executeGraphQL<{ updatePlayer: unknown }>(mutation, {
+    playerId,
+    nickname: updates.nickname,
+    avatarColor: updates.avatarColor,
+  });
+  return result.updatePlayer;
+}
+
+/**
+ * Update a player's info within a game (for real-time sync)
+ */
+export async function updateGamePlayer(
+  gameId: string,
+  playerId: string,
+  updates: { nickname?: string; avatarColor?: string }
+) {
+  const mutation = `
+    mutation UpdateGamePlayer($gameId: ID!, $playerId: ID!, $nickname: String, $avatarColor: String) {
+      updateGamePlayer(gameId: $gameId, playerId: $playerId, nickname: $nickname, avatarColor: $avatarColor) {
+        gameId
+        playerId
+        nickname
+        avatarColor
+        joinOrder
+        isReady
+        isHost
+        isConnected
+        score
+        guessCount
+        foundWord
+        lastActiveAt
+      }
+    }
+  `;
+
+  const result = await executeGraphQL<{ updateGamePlayer: unknown }>(mutation, {
+    gameId,
+    playerId,
+    nickname: updates.nickname,
+    avatarColor: updates.avatarColor,
+  });
+  return result.updateGamePlayer;
+}
+
+/**
  * Create a new game
  */
 export async function createGame(params: {

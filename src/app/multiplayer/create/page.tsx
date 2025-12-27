@@ -10,6 +10,7 @@ import { TURN_DURATION_OPTIONS } from '@/types/multiplayer';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import GlassCard from '@/components/ui/GlassCard';
 import AnimatedButton from '@/components/ui/AnimatedButton';
+import ProfileButton from '@/components/multiplayer/ProfileButton';
 
 export default function CreateGamePage() {
   const router = useRouter();
@@ -136,18 +137,7 @@ export default function CreateGamePage() {
         </AnimatedButton>
 
         <div className="flex items-center gap-3">
-          {/* Player info */}
-          <div className="flex items-center gap-2">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
-              style={{ backgroundColor: player.avatarColor }}
-            >
-              {player.nickname[0].toUpperCase()}
-            </div>
-            <span className="font-medium" style={{ color: colors.textPrimary }}>
-              {player.nickname}
-            </span>
-          </div>
+          <ProfileButton />
           <ThemeToggle />
         </div>
       </div>

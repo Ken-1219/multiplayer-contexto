@@ -11,6 +11,7 @@ import ThemeToggle from '@/components/ui/ThemeToggle';
 import GlassCard from '@/components/ui/GlassCard';
 import AnimatedButton from '@/components/ui/AnimatedButton';
 import AnimatedInput from '@/components/ui/AnimatedInput';
+import ProfileButton from '@/components/multiplayer/ProfileButton';
 
 export default function MultiplayerLobbyPage() {
   const router = useRouter();
@@ -272,22 +273,8 @@ export default function MultiplayerLobbyPage() {
           Back
         </AnimatedButton>
 
-        <div className="flex items-center gap-4">
-          {/* Player info */}
-          <div className="flex items-center gap-2">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
-              style={{ backgroundColor: player.avatarColor }}
-            >
-              {player.nickname[0].toUpperCase()}
-            </div>
-            <span
-              className="font-medium text-sm hidden sm:inline"
-              style={{ color: colors.textPrimary }}
-            >
-              {player.nickname}
-            </span>
-          </div>
+        <div className="flex items-center gap-3">
+          <ProfileButton />
           <ThemeToggle />
         </div>
       </div>

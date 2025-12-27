@@ -241,6 +241,8 @@ export interface MultiplayerState {
  */
 export interface MultiplayerActions {
   createPlayer: (nickname: string, avatarColor?: string) => Promise<void>;
+  updateProfile: (nickname?: string, avatarColor?: string) => Promise<void>;
+  logout: () => Promise<void>;
   createGame: (options: CreateGameInput) => Promise<string>;
   joinGame: (roomCode: string) => Promise<void>;
   leaveGame: () => Promise<void>;

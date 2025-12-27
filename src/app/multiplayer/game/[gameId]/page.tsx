@@ -13,6 +13,7 @@ import GuessItem from '@/components/ui/GuessItem';
 import AnimatedButton from '@/components/ui/AnimatedButton';
 import AnimatedInput from '@/components/ui/AnimatedInput';
 import TurnIndicator from '@/components/multiplayer/TurnIndicator';
+import ProfileButton from '@/components/multiplayer/ProfileButton';
 import TurnTimer from '@/components/multiplayer/TurnTimer';
 import PlayerCard from '@/components/multiplayer/PlayerCard';
 import GameResult from '@/components/multiplayer/GameResult';
@@ -246,7 +247,10 @@ export default function MultiplayerGamePage() {
           >
             Home
           </AnimatedButton>
-          <ThemeToggle />
+          <div className="flex items-center gap-3">
+            <ProfileButton />
+            <ThemeToggle />
+          </div>
         </motion.div>
 
         {/* Title */}

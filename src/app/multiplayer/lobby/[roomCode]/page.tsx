@@ -9,6 +9,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import GlassCard from '@/components/ui/GlassCard';
 import AnimatedButton from '@/components/ui/AnimatedButton';
+import ProfileButton from '@/components/multiplayer/ProfileButton';
 
 export default function WaitingRoomPage() {
   const router = useRouter();
@@ -260,6 +261,7 @@ export default function WaitingRoomPage() {
               )}
             </motion.div>
           </motion.button>
+          <ProfileButton />
           <ThemeToggle />
         </div>
       </div>
