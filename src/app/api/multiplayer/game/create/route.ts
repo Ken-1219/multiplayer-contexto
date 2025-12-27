@@ -91,11 +91,13 @@ export async function POST(
     const secretWord = selectSecretWord(gameNumber);
 
     // Create game in DynamoDB via AppSync
+    const typedPlayer = player as { nickname: string; avatarColor: string };
     const game = await createGame({
       gameId,
       roomCode,
       gameMode,
       turnDuration: finalTurnDuration,
+      hostNickname: typedPlayer.nickname,
       maxPlayers: finalMaxPlayers,
       isPublic: isPublic ?? true,
       hostPlayerId: playerId,
@@ -110,7 +112,6 @@ export async function POST(
     }
 
     // Add host as first player
-    const typedPlayer = player as { nickname: string; avatarColor: string };
     await joinGame({
       gameId,
       playerId,

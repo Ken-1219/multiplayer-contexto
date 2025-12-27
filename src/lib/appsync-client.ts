@@ -5,6 +5,8 @@
  * It uses API Key authentication and should NEVER be imported in client components.
  */
 
+import type { GameListItem } from '@/types/multiplayer';
+
 // Environment variables (server-side only - no NEXT_PUBLIC_ prefix)
 const APPSYNC_API_URL = process.env.APPSYNC_API_URL!;
 const APPSYNC_API_KEY = process.env.APPSYNC_API_KEY!;
@@ -219,6 +221,7 @@ export async function listPublicGames(limit: number = 10) {
         gameId
         roomCode
         gameMode
+        hostNickname
         playerCount
         maxPlayers
         createdAt
@@ -226,7 +229,7 @@ export async function listPublicGames(limit: number = 10) {
     }
   `;
 
-  const result = await executeGraphQL<{ listPublicGames: unknown[] }>(query, { limit });
+  const result = await executeGraphQL<{ listPublicGames: GameListItem[] }>(query, { limit });
   return result.listPublicGames;
 }
 
@@ -335,6 +338,7 @@ export async function createGame(params: {
   roomCode: string;
   gameMode: string;
   turnDuration: number;
+  hostNickname: string;
   maxPlayers: number;
   isPublic: boolean;
   hostPlayerId: string;
@@ -346,6 +350,7 @@ export async function createGame(params: {
       $roomCode: String!
       $gameMode: String!
       $turnDuration: Int!
+      $hostNickname: String!
       $maxPlayers: Int!
       $isPublic: Boolean!
       $hostPlayerId: ID!
@@ -356,6 +361,7 @@ export async function createGame(params: {
         roomCode: $roomCode
         gameMode: $gameMode
         turnDuration: $turnDuration
+        hostNickname: $hostNickname
         maxPlayers: $maxPlayers
         isPublic: $isPublic
         hostPlayerId: $hostPlayerId

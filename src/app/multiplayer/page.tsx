@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, LogIn, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus, LogIn, Sparkles, Search } from 'lucide-react';
 import { useMultiplayer } from '@/contexts/MultiplayerContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { validateNickname, AVATAR_COLORS, type AvatarColor } from '@/types/multiplayer';
@@ -306,7 +306,7 @@ export default function MultiplayerLobbyPage() {
           {/* Options */}
           <motion.div
             variants={itemVariants}
-            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
           >
             {/* Create Game */}
             <motion.div
@@ -342,6 +342,46 @@ export default function MultiplayerLobbyPage() {
                       style={{ color: colors.textMuted }}
                     >
                       Host a new room and invite a friend
+                    </p>
+                  </div>
+                </div>
+              </GlassCard>
+            </motion.div>
+
+            {/* Browse Games */}
+            <motion.div
+              whileHover={{ scale: 1.02, y: -4 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <GlassCard
+                className="cursor-pointer p-8 h-full"
+                onClick={() => router.push('/multiplayer/browse')}
+              >
+                <div className="flex flex-col items-center text-center gap-5">
+                  <motion.div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                    style={{
+                      background: `linear-gradient(135deg, ${colors.success}30, ${colors.success}10)`,
+                      border: `1px solid ${colors.success}40`,
+                    }}
+                    whileHover={{
+                      boxShadow: `0 0 30px ${colors.accentGlow}`,
+                    }}
+                  >
+                    <Search className="w-8 h-8" style={{ color: colors.success }} />
+                  </motion.div>
+                  <div className="space-y-2">
+                    <h2
+                      className="text-xl font-bold"
+                      style={{ color: colors.textPrimary }}
+                    >
+                      Browse Games
+                    </h2>
+                    <p
+                      className="text-sm"
+                      style={{ color: colors.textMuted }}
+                    >
+                      Find and join public games
                     </p>
                   </div>
                 </div>
