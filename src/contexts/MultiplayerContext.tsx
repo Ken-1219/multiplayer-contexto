@@ -73,6 +73,9 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Initialization state - tracks if we've checked for existing player
+  const [isInitialized, setIsInitialized] = useState(false);
+
   // Polling ref
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -128,6 +131,8 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
         }
       } catch (e) {
         console.error('Failed to load player:', e);
+      } finally {
+        setIsInitialized(true);
       }
     };
     loadPlayerAndSession();
@@ -647,6 +652,7 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     player,
     gameState,
     isLoading,
+    isInitialized,
     error,
     createPlayer,
     createGame,

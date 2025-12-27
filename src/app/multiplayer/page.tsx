@@ -15,7 +15,7 @@ import AnimatedInput from '@/components/ui/AnimatedInput';
 export default function MultiplayerLobbyPage() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { player, isLoading, error, createPlayer, clearError } = useMultiplayer();
+  const { player, isLoading, isInitialized, error, createPlayer, clearError } = useMultiplayer();
 
   const [nickname, setNickname] = useState('');
   const [selectedColor, setSelectedColor] = useState<AvatarColor>(AVATAR_COLORS[0]);
@@ -61,6 +61,36 @@ export default function MultiplayerLobbyPage() {
       },
     },
   };
+
+  // Show loading state while checking for existing player
+  if (!isInitialized) {
+    return (
+      <div
+        className="min-h-screen w-full flex items-center justify-center"
+        style={{
+          background: `linear-gradient(135deg, ${colors.bgFrom} 0%, ${colors.bgTo} 100%)`,
+        }}
+      >
+        {/* Background Pattern */}
+        <div
+          className="fixed inset-0 pointer-events-none"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, ${colors.bgPattern} 1px, transparent 0)`,
+            backgroundSize: '24px 24px',
+          }}
+        />
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          className="w-10 h-10 border-3 rounded-full"
+          style={{
+            borderColor: `${colors.primary}30`,
+            borderTopColor: colors.primary,
+          }}
+        />
+      </div>
+    );
+  }
 
   // Show nickname setup if no player
   if (!player) {

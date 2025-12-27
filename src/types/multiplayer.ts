@@ -232,6 +232,7 @@ export interface MultiplayerState {
   player: Player | null;
   gameState: GameState | null;
   isLoading: boolean;
+  isInitialized: boolean;
   error: string | null;
 }
 
