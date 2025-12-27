@@ -31,7 +31,7 @@ const MultiplayerContext = createContext<MultiplayerContextType | null>(null);
 
 // Constants
 const POLL_INTERVAL = 2000;           // 2 seconds
-const DISCONNECT_TIMEOUT = 10000;     // 10 seconds
+const _DISCONNECT_TIMEOUT = 10000;    // 10 seconds (used in backend heartbeat logic)
 const WAITING_GAME_TTL = 15 * 60000;  // 15 minutes
 
 // Session storage key
@@ -132,17 +132,6 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     };
     loadPlayerAndSession();
   }, []);
-
-  // Start/stop polling based on game state
-  useEffect(() => {
-    if (gameState?.game?.gameId && ['WAITING', 'ACTIVE'].includes(gameState.game.status)) {
-      startPolling(gameState.game.gameId);
-    } else {
-      stopPolling();
-    }
-
-    return () => stopPolling();
-  }, [gameState?.game?.gameId, gameState?.game?.status]);
 
   // Show confirmation when leaving an active game (but don't auto-leave on refresh)
   // Disconnection is now handled via heartbeat timeout instead
@@ -284,6 +273,18 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
       pollIntervalRef.current = null;
     }
   }, []);
+
+
+  // Start/stop polling based on game state
+  useEffect(() => {
+    if (gameState?.game?.gameId && ['WAITING', 'ACTIVE'].includes(gameState.game.status)) {
+      startPolling(gameState.game.gameId);
+    } else {
+      stopPolling();
+    }
+
+    return () => stopPolling();
+  }, [gameState?.game?.gameId, gameState?.game?.status, startPolling, stopPolling]);
 
   // Create player
   const createPlayer = useCallback(async (nickname: string, avatarColor?: string) => {
