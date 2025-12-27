@@ -89,16 +89,16 @@ export async function POST(
     const nextTurnPlayerId = players[nextPlayerIndex].playerId;
     const newTurnNumber = game.turnNumber + 1;
 
-    // Capture turnStartedAt to return to client for timer sync
-    const turnStartedAt = Date.now();
-    await updateTurn(gameId, nextTurnPlayerId, newTurnNumber, turnStartedAt);
+    // Capture new turnStartedAt to return to client for timer sync
+    const newTurnStartedAt = Date.now();
+    await updateTurn(gameId, nextTurnPlayerId, newTurnNumber, newTurnStartedAt);
 
     return NextResponse.json({
       success: true,
       data: {
         nextTurnPlayerId,
         turnNumber: newTurnNumber,
-        turnStartedAt,
+        turnStartedAt: newTurnStartedAt,
       },
     });
   } catch (error) {
