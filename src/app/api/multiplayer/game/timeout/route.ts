@@ -17,7 +17,7 @@ import {
  */
 export async function POST(
   request: NextRequest
-): Promise<NextResponse<ApiResponse<{ nextTurnPlayerId: string; turnNumber: number }>>> {
+): Promise<NextResponse<ApiResponse<{ nextTurnPlayerId: string; turnNumber: number; turnStartedAt: number }>>> {
   try {
     // Get playerId from cookie
     const playerId = request.cookies.get('playerId')?.value;
@@ -89,14 +89,16 @@ export async function POST(
     const nextTurnPlayerId = players[nextPlayerIndex].playerId;
     const newTurnNumber = game.turnNumber + 1;
 
-    // Update turn with new turnStartedAt to sync timer
-    await updateTurn(gameId, nextTurnPlayerId, newTurnNumber, Date.now());
+    // Capture turnStartedAt to return to client for timer sync
+    const turnStartedAt = Date.now();
+    await updateTurn(gameId, nextTurnPlayerId, newTurnNumber, turnStartedAt);
 
     return NextResponse.json({
       success: true,
       data: {
         nextTurnPlayerId,
         turnNumber: newTurnNumber,
+        turnStartedAt,
       },
     });
   } catch (error) {

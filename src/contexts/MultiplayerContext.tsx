@@ -521,7 +521,7 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
 
       const result = data.data as GuessResult;
 
-      // Update local state
+      // Update local state with server's turnStartedAt for timer sync
       setGameState((prev) => {
         if (!prev) return prev;
 
@@ -537,6 +537,7 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
             currentTurnPlayerId: result.nextTurnPlayerId,
             winnerId: result.winnerId,
             turnNumber: prev.game.turnNumber + 1,
+            turnStartedAt: result.turnStartedAt || prev.game.turnStartedAt,
           },
           guesses: newGuesses,
         };
@@ -595,7 +596,7 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
       const data = await res.json();
 
       if (data.success) {
-        // Update local state with new turn info
+        // Update local state with server's turnStartedAt for timer sync
         setGameState((prev) => {
           if (!prev) return prev;
           return {
@@ -604,7 +605,7 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
               ...prev.game,
               currentTurnPlayerId: data.data.nextTurnPlayerId,
               turnNumber: data.data.turnNumber,
-              turnStartedAt: Date.now(),
+              turnStartedAt: data.data.turnStartedAt,
             },
           };
         });

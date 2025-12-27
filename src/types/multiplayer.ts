@@ -133,6 +133,7 @@ export interface GuessResult {
   gameStatus: GameStatus;
   winnerId: string | null;
   nextTurnPlayerId: string | null;
+  turnStartedAt: number | null;
   error?: string;
 }
 

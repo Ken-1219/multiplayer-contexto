@@ -166,6 +166,7 @@ export async function POST(
     let gameStatus: 'WAITING' | 'ACTIVE' | 'COMPLETED' | 'ABANDONED' = game.status as 'WAITING' | 'ACTIVE' | 'COMPLETED' | 'ABANDONED';
     let winnerId: string | null = null;
     let nextTurnPlayerId: string | null = null;
+    let turnStartedAt: number | null = null;
 
     if (isCorrect) {
       // Player wins!
@@ -179,8 +180,9 @@ export async function POST(
       const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
       nextTurnPlayerId = players[nextPlayerIndex].playerId;
 
-      // Pass turnStartedAt to sync timer across all clients
-      await updateTurn(gameId, nextTurnPlayerId, game.turnNumber + 1, Date.now());
+      // Capture turnStartedAt to return to client for timer sync
+      turnStartedAt = Date.now();
+      await updateTurn(gameId, nextTurnPlayerId, game.turnNumber + 1, turnStartedAt);
     }
 
     return NextResponse.json({
@@ -203,6 +205,7 @@ export async function POST(
         gameStatus,
         winnerId,
         nextTurnPlayerId,
+        turnStartedAt,
       },
     });
   } catch (error) {
