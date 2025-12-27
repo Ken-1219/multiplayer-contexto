@@ -113,6 +113,7 @@ export async function getGameState(gameId: string) {
           currentTurnPlayerId
           turnNumber
           turnDuration
+          turnStartedAt
           maxPlayers
           isPublic
           hostPlayerId
@@ -390,6 +391,7 @@ export async function startGame(gameId: string, currentTurnPlayerId: string) {
         status
         currentTurnPlayerId
         turnNumber
+        turnStartedAt
         startedAt
       }
     }
@@ -462,14 +464,16 @@ export async function submitGuess(params: {
 export async function updateTurn(
   gameId: string,
   currentTurnPlayerId: string,
-  turnNumber: number
+  turnNumber: number,
+  turnStartedAt?: number
 ) {
   const mutation = `
-    mutation UpdateTurn($gameId: ID!, $currentTurnPlayerId: ID!, $turnNumber: Int!) {
-      updateTurn(gameId: $gameId, currentTurnPlayerId: $currentTurnPlayerId, turnNumber: $turnNumber) {
+    mutation UpdateTurn($gameId: ID!, $currentTurnPlayerId: ID!, $turnNumber: Int!, $turnStartedAt: AWSTimestamp!) {
+      updateTurn(gameId: $gameId, currentTurnPlayerId: $currentTurnPlayerId, turnNumber: $turnNumber, turnStartedAt: $turnStartedAt) {
         gameId
         currentTurnPlayerId
         turnNumber
+        turnStartedAt
       }
     }
   `;
@@ -478,6 +482,7 @@ export async function updateTurn(
     gameId,
     currentTurnPlayerId,
     turnNumber,
+    turnStartedAt: turnStartedAt || Date.now(),
   });
   return result.updateTurn;
 }

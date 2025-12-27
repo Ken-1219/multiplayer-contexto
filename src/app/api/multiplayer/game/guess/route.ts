@@ -179,7 +179,8 @@ export async function POST(
       const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
       nextTurnPlayerId = players[nextPlayerIndex].playerId;
 
-      await updateTurn(gameId, nextTurnPlayerId, game.turnNumber + 1);
+      // Pass turnStartedAt to sync timer across all clients
+      await updateTurn(gameId, nextTurnPlayerId, game.turnNumber + 1, Date.now());
     }
 
     return NextResponse.json({
