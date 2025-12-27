@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { useTheme } from '@/contexts/ThemeContext';
 import { formatTimer } from '@/types/multiplayer';
 
 interface TurnTimerProps {
-  duration: number; // Total seconds for the turn
-  turnStartedAt: number; // Timestamp when turn started
+  duration: number;
+  turnStartedAt: number;
   isMyTurn: boolean;
-  isPaused?: boolean; // Pause timer while processing
+  isPaused?: boolean;
   onTimeout?: () => void;
 }
 
@@ -18,11 +20,11 @@ export default function TurnTimer({
   isPaused = false,
   onTimeout,
 }: TurnTimerProps) {
+  const { colors } = useTheme();
   const [timeLeft, setTimeLeft] = useState(duration);
   const timeoutCalledRef = useRef(false);
 
   useEffect(() => {
-    // Reset timeout flag when turn changes
     timeoutCalledRef.current = false;
 
     const calculateTimeLeft = () => {
@@ -33,7 +35,6 @@ export default function TurnTimer({
 
     setTimeLeft(calculateTimeLeft());
 
-    // Don't run interval if paused
     if (isPaused) return;
 
     const interval = setInterval(() => {
@@ -49,45 +50,70 @@ export default function TurnTimer({
     return () => clearInterval(interval);
   }, [duration, turnStartedAt, onTimeout, isPaused]);
 
-  // Calculate progress percentage
   const progress = (timeLeft / duration) * 100;
 
-  // Determine color based on time left
   const getColor = () => {
-    if (timeLeft <= 10) return 'text-red-400';
-    if (timeLeft <= 30) return 'text-yellow-400';
-    return 'text-emerald-400';
+    if (timeLeft <= 10) return colors.error;
+    if (timeLeft <= 30) return colors.warning;
+    return colors.primary;
   };
 
-  const getProgressColor = () => {
-    if (timeLeft <= 10) return 'bg-red-500';
-    if (timeLeft <= 30) return 'bg-yellow-500';
-    return 'bg-emerald-500';
-  };
+  const timerColor = getColor();
+  const isUrgent = timeLeft <= 10;
 
   return (
-    <div className="mt-2">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="mt-3"
+    >
       {/* Time display */}
-      <div
-        className={`text-2xl font-mono font-bold text-center ${getColor()} ${
-          timeLeft <= 10 ? 'animate-pulse' : ''
-        }`}
+      <motion.div
+        animate={isUrgent ? {
+          scale: [1, 1.05, 1],
+          x: [0, -2, 2, -2, 0],
+        } : {}}
+        transition={{ duration: 0.5, repeat: isUrgent ? Infinity : 0 }}
+        className="text-3xl font-mono font-bold text-center"
+        style={{ color: timerColor }}
       >
         {formatTimer(timeLeft)}
-      </div>
+      </motion.div>
 
       {/* Progress bar */}
-      <div className="w-32 h-2 bg-slate-700 rounded-full overflow-hidden mx-auto mt-1">
-        <div
-          className={`h-full transition-all duration-1000 ease-linear ${getProgressColor()}`}
-          style={{ width: `${progress}%` }}
+      <div
+        className="w-36 h-2 rounded-full overflow-hidden mx-auto mt-2"
+        style={{ backgroundColor: colors.cardBg }}
+      >
+        <motion.div
+          className="h-full rounded-full"
+          style={{ backgroundColor: timerColor }}
+          initial={{ width: '100%' }}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.5, ease: 'linear' }}
         />
       </div>
 
-      {/* Turn indicator text */}
-      <p className="text-xs text-slate-500 text-center mt-1">
-        {isPaused ? 'Processing...' : isMyTurn ? 'Your turn' : "Opponent's turn"}
-      </p>
-    </div>
+      {/* Status text */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="text-xs text-center mt-2"
+        style={{ color: colors.textMuted }}
+      >
+        {isPaused ? (
+          <motion.span
+            animate={{ opacity: [1, 0.5, 1] }}
+            transition={{ duration: 1, repeat: Infinity }}
+          >
+            Processing...
+          </motion.span>
+        ) : isMyTurn ? (
+          'Your turn'
+        ) : (
+          "Opponent's turn"
+        )}
+      </motion.p>
+    </motion.div>
   );
 }

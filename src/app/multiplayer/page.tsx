@@ -1,13 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardBody, Button, Input, Spinner } from '@nextui-org/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, Plus, LogIn, Sparkles } from 'lucide-react';
 import { useMultiplayer } from '@/contexts/MultiplayerContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { validateNickname, AVATAR_COLORS, type AvatarColor } from '@/types/multiplayer';
+import ThemeToggle from '@/components/ui/ThemeToggle';
+import GlassCard from '@/components/ui/GlassCard';
+import AnimatedButton from '@/components/ui/AnimatedButton';
+import AnimatedInput from '@/components/ui/AnimatedInput';
 
 export default function MultiplayerLobbyPage() {
   const router = useRouter();
+  const { colors } = useTheme();
   const { player, isLoading, error, createPlayer, clearError } = useMultiplayer();
 
   const [nickname, setNickname] = useState('');
@@ -15,7 +22,6 @@ export default function MultiplayerLobbyPage() {
   const [nicknameError, setNicknameError] = useState<string | null>(null);
 
   const handleCreatePlayer = async () => {
-    // Validate nickname
     const validation = validateNickname(nickname);
     if (!validation.valid) {
       setNicknameError(validation.error || 'Invalid nickname');
@@ -32,179 +38,364 @@ export default function MultiplayerLobbyPage() {
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: 'spring' as const,
+        stiffness: 100,
+        damping: 15,
+      },
+    },
+  };
+
   // Show nickname setup if no player
   if (!player) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col items-center justify-center p-4">
-        {/* Back button */}
-        <Button
-          variant="light"
-          className="absolute top-4 left-4 text-slate-400"
-          onPress={() => router.push('/')}
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </Button>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen w-full"
+        style={{
+          background: `linear-gradient(135deg, ${colors.bgFrom} 0%, ${colors.bgTo} 100%)`,
+        }}
+      >
+        {/* Background Pattern */}
+        <div
+          className="fixed inset-0 pointer-events-none"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, ${colors.bgPattern} 1px, transparent 0)`,
+            backgroundSize: '24px 24px',
+          }}
+        />
 
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Create Your Profile</h1>
-          <p className="text-slate-400">Choose a nickname to play multiplayer</p>
+        {/* Header */}
+        <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-20">
+          <AnimatedButton
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push('/')}
+            leftIcon={<ArrowLeft className="w-4 h-4" />}
+          >
+            Back
+          </AnimatedButton>
+          <ThemeToggle />
         </div>
 
-        <Card className="w-full max-w-md bg-slate-800/50 border border-slate-700">
-          <CardBody className="p-6 space-y-6">
-            {/* Nickname Input */}
-            <div>
-              <label className="text-sm text-slate-400 mb-2 block">Nickname</label>
-              <Input
-                aria-label="Nickname"
-                placeholder="Enter your nickname"
-                value={nickname}
-                onChange={(e) => {
-                  setNickname(e.target.value);
-                  setNicknameError(null);
-                }}
-                maxLength={20}
-                isInvalid={!!nicknameError}
-                errorMessage={nicknameError}
-                variant="bordered"
-                classNames={{
-                  input: 'text-white',
-                  inputWrapper: `bg-slate-700/50 border-slate-600 hover:bg-slate-700 data-[hover=true]:bg-slate-700 ${nicknameError ? 'border-red-500' : ''}`,
-                  errorMessage: 'text-red-400',
-                }}
-              />
-              {nicknameError ? (
-                <p className="text-xs text-red-400 mt-1">{nicknameError}</p>
-              ) : (
-                <p className="text-xs text-slate-500 mt-1">
-                  2-20 characters, letters, numbers, underscores, hyphens only
-                </p>
-              )}
-            </div>
+        <div className="relative min-h-screen flex flex-col items-center justify-center p-4">
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="w-full max-w-md space-y-6"
+          >
+            <motion.div variants={itemVariants} className="text-center">
+              <h1
+                className="text-3xl font-bold mb-2"
+                style={{ color: colors.textPrimary }}
+              >
+                Create Your Profile
+              </h1>
+              <p style={{ color: colors.textMuted }}>
+                Choose a nickname to play multiplayer
+              </p>
+            </motion.div>
 
-            {/* Avatar Color Selection */}
-            <div>
-              <label className="text-sm text-slate-400 mb-2 block">Choose your color</label>
-              <div className="grid grid-cols-8 gap-2">
-                {AVATAR_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setSelectedColor(color)}
-                    className={`w-8 h-8 rounded-full transition-all ${
-                      selectedColor === color
-                        ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-800 scale-110'
-                        : 'hover:scale-105'
-                    }`}
-                    style={{ backgroundColor: color }}
+            <motion.div variants={itemVariants}>
+              <GlassCard className="p-6 space-y-6">
+                {/* Nickname Input */}
+                <div>
+                  <label
+                    className="text-sm font-medium mb-2 block"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Nickname
+                  </label>
+                  <AnimatedInput
+                    placeholder="Enter your nickname"
+                    value={nickname}
+                    onChange={(e) => {
+                      setNickname(e.target.value);
+                      setNicknameError(null);
+                    }}
+                    maxLength={20}
+                    error={nicknameError || undefined}
                   />
-                ))}
-              </div>
-            </div>
+                  {!nicknameError && (
+                    <p
+                      className="text-xs mt-2"
+                      style={{ color: colors.textMuted }}
+                    >
+                      2-20 characters, letters, numbers, underscores, hyphens only
+                    </p>
+                  )}
+                </div>
 
-            {/* Error message */}
-            {error && (
-              <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg">
-                {error}
-              </div>
-            )}
+                {/* Avatar Color Selection */}
+                <div>
+                  <label
+                    className="text-sm font-medium mb-3 block"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Choose your color
+                  </label>
+                  <div className="grid grid-cols-8 gap-3">
+                    {AVATAR_COLORS.map((color, index) => (
+                      <motion.button
+                        key={color}
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: index * 0.03 }}
+                        onClick={() => setSelectedColor(color)}
+                        className="w-8 h-8 rounded-full transition-all"
+                        style={{
+                          backgroundColor: color,
+                          boxShadow: selectedColor === color
+                            ? `0 0 0 3px ${colors.bgTo}, 0 0 0 5px ${color}`
+                            : undefined,
+                          transform: selectedColor === color ? 'scale(1.15)' : undefined,
+                        }}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                      />
+                    ))}
+                  </div>
+                </div>
 
-            {/* Submit button */}
-            <Button
-              color="primary"
-              size="lg"
-              className="w-full"
-              onPress={handleCreatePlayer}
-              isLoading={isLoading}
-            >
-              Continue
-            </Button>
-          </CardBody>
-        </Card>
-      </div>
+                {/* Error message */}
+                <AnimatePresence>
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="p-3 rounded-lg text-sm"
+                      style={{
+                        backgroundColor: colors.errorBg,
+                        color: colors.error,
+                      }}
+                    >
+                      {error}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Submit button */}
+                <AnimatedButton
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  glow
+                  onClick={handleCreatePlayer}
+                  isLoading={isLoading}
+                >
+                  Continue
+                </AnimatedButton>
+              </GlassCard>
+            </motion.div>
+          </motion.div>
+        </div>
+      </motion.div>
     );
   }
 
   // Show Create/Join options
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col items-center justify-center p-4">
-      {/* Back button */}
-      <Button
-        variant="light"
-        className="absolute top-4 left-4 text-slate-400"
-        onPress={() => router.push('/')}
-      >
-        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Back
-      </Button>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen w-full"
+      style={{
+        background: `linear-gradient(135deg, ${colors.bgFrom} 0%, ${colors.bgTo} 100%)`,
+      }}
+    >
+      {/* Background Pattern */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, ${colors.bgPattern} 1px, transparent 0)`,
+          backgroundSize: '24px 24px',
+        }}
+      />
 
-      {/* Player info */}
-      <div className="absolute top-4 right-4 flex items-center gap-2">
-        <div
-          className="w-8 h-8 rounded-full"
-          style={{ backgroundColor: player.avatarColor }}
-        />
-        <span className="text-white font-medium">{player.nickname}</span>
-      </div>
-
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Multiplayer</h1>
-        <p className="text-slate-400">Create a new game or join an existing one</p>
-      </div>
-
-      <div className="w-full max-w-2xl flex flex-row gap-4">
-        {/* Create Game */}
-        <Card
-          isPressable
-          onPress={() => router.push('/multiplayer/create')}
-          className="flex-1 bg-slate-800/50 border border-slate-700 hover:border-blue-500 transition-all"
+      {/* Header */}
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-20">
+        <AnimatedButton
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push('/')}
+          leftIcon={<ArrowLeft className="w-4 h-4" />}
         >
-          <CardBody className="p-6">
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-white">Create Game</h2>
-                <p className="text-slate-400 text-sm mt-1">Host a new room and invite a friend</p>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
+          Back
+        </AnimatedButton>
 
-        {/* Join Game */}
-        <Card
-          isPressable
-          onPress={() => router.push('/multiplayer/join')}
-          className="flex-1 bg-slate-800/50 border border-slate-700 hover:border-emerald-500 transition-all"
-        >
-          <CardBody className="p-6">
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-white">Join Game</h2>
-                <p className="text-slate-400 text-sm mt-1">Enter a room code to join</p>
-              </div>
+        <div className="flex items-center gap-4">
+          {/* Player info */}
+          <div className="flex items-center gap-2">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+              style={{ backgroundColor: player.avatarColor }}
+            >
+              {player.nickname[0].toUpperCase()}
             </div>
-          </CardBody>
-        </Card>
-      </div>
-
-      {isLoading && (
-        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-          <Spinner size="lg" />
+            <span
+              className="font-medium text-sm hidden sm:inline"
+              style={{ color: colors.textPrimary }}
+            >
+              {player.nickname}
+            </span>
+          </div>
+          <ThemeToggle />
         </div>
-      )}
-    </div>
+      </div>
+
+      <div className="relative min-h-screen flex flex-col items-center justify-center p-4">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="w-full max-w-2xl space-y-8"
+        >
+          {/* Title */}
+          <motion.div variants={itemVariants} className="text-center space-y-2">
+            <div className="flex items-center justify-center gap-2">
+              <Sparkles className="h-6 w-6" style={{ color: colors.primary }} />
+              <h1
+                className="text-3xl font-bold"
+                style={{ color: colors.textPrimary }}
+              >
+                Multiplayer
+              </h1>
+              <Sparkles className="h-6 w-6" style={{ color: colors.accent }} />
+            </div>
+            <p style={{ color: colors.textMuted }}>
+              Create a new game or join an existing one
+            </p>
+          </motion.div>
+
+          {/* Options */}
+          <motion.div
+            variants={itemVariants}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            {/* Create Game */}
+            <motion.div
+              whileHover={{ scale: 1.02, y: -4 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <GlassCard
+                className="cursor-pointer p-8 h-full"
+                onClick={() => router.push('/multiplayer/create')}
+              >
+                <div className="flex flex-col items-center text-center gap-5">
+                  <motion.div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                    style={{
+                      background: `linear-gradient(135deg, ${colors.primary}30, ${colors.primary}10)`,
+                      border: `1px solid ${colors.primary}40`,
+                    }}
+                    whileHover={{
+                      boxShadow: `0 0 30px ${colors.accentGlow}`,
+                    }}
+                  >
+                    <Plus className="w-8 h-8" style={{ color: colors.primary }} />
+                  </motion.div>
+                  <div className="space-y-2">
+                    <h2
+                      className="text-xl font-bold"
+                      style={{ color: colors.textPrimary }}
+                    >
+                      Create Game
+                    </h2>
+                    <p
+                      className="text-sm"
+                      style={{ color: colors.textMuted }}
+                    >
+                      Host a new room and invite a friend
+                    </p>
+                  </div>
+                </div>
+              </GlassCard>
+            </motion.div>
+
+            {/* Join Game */}
+            <motion.div
+              whileHover={{ scale: 1.02, y: -4 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <GlassCard
+                className="cursor-pointer p-8 h-full"
+                onClick={() => router.push('/multiplayer/join')}
+              >
+                <div className="flex flex-col items-center text-center gap-5">
+                  <motion.div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                    style={{
+                      background: `linear-gradient(135deg, ${colors.accent}30, ${colors.accent}10)`,
+                      border: `1px solid ${colors.accent}40`,
+                    }}
+                    whileHover={{
+                      boxShadow: `0 0 30px ${colors.accentGlow}`,
+                    }}
+                  >
+                    <LogIn className="w-8 h-8" style={{ color: colors.accent }} />
+                  </motion.div>
+                  <div className="space-y-2">
+                    <h2
+                      className="text-xl font-bold"
+                      style={{ color: colors.textPrimary }}
+                    >
+                      Join Game
+                    </h2>
+                    <p
+                      className="text-sm"
+                      style={{ color: colors.textMuted }}
+                    >
+                      Enter a room code to join
+                    </p>
+                  </div>
+                </div>
+              </GlassCard>
+            </motion.div>
+          </motion.div>
+        </motion.div>
+      </div>
+
+      {/* Loading overlay */}
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center z-50"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              className="w-10 h-10 border-3 rounded-full"
+              style={{
+                borderColor: `${colors.primary}30`,
+                borderTopColor: colors.primary,
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

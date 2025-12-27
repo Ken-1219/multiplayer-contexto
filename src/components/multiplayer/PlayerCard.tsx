@@ -1,6 +1,7 @@
 'use client';
 
-import { Chip } from '@nextui-org/react';
+import { motion } from 'framer-motion';
+import { useTheme } from '@/contexts/ThemeContext';
 import { type GamePlayer } from '@/types/multiplayer';
 
 interface PlayerCardProps {
@@ -16,49 +17,95 @@ export default function PlayerCard({
   guessCount,
   isYou,
 }: PlayerCardProps) {
+  const { colors } = useTheme();
+
   return (
-    <div
-      className={`flex flex-col items-center p-3 rounded-lg transition-all ${
-        isCurrentTurn
-          ? 'bg-emerald-500/10 border border-emerald-500/30 scale-105'
-          : 'bg-slate-800/50 border border-slate-700'
-      }`}
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      whileHover={{ scale: 1.02 }}
+      className="flex flex-col items-center p-4 rounded-xl backdrop-blur-md transition-all"
+      style={{
+        backgroundColor: isCurrentTurn ? `${colors.primary}15` : colors.cardBg,
+        border: `1px solid ${isCurrentTurn ? colors.primary : colors.cardBorder}`,
+        boxShadow: isCurrentTurn ? `0 0 20px ${colors.accentGlow}` : undefined,
+      }}
     >
       {/* Avatar */}
-      <div
-        className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${
-          isCurrentTurn ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-slate-900' : ''
-        }`}
-        style={{ backgroundColor: player.avatarColor }}
+      <motion.div
+        animate={isCurrentTurn ? {
+          scale: [1, 1.05, 1],
+        } : {}}
+        transition={{ duration: 2, repeat: Infinity }}
+        className="relative"
       >
-        {player.nickname[0].toUpperCase()}
-      </div>
+        <div
+          className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg"
+          style={{
+            backgroundColor: player.avatarColor,
+            boxShadow: isCurrentTurn ? `0 0 15px ${player.avatarColor}` : undefined,
+          }}
+        >
+          {player.nickname[0].toUpperCase()}
+        </div>
+        {isCurrentTurn && (
+          <motion.div
+            className="absolute -inset-1 rounded-full"
+            style={{ border: `2px solid ${colors.primary}` }}
+            animate={{ scale: [1, 1.1, 1], opacity: [1, 0.5, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          />
+        )}
+      </motion.div>
 
-      {/* Name */}
-      <div className="mt-2 flex items-center gap-1">
-        <span className="text-white font-medium text-sm truncate max-w-[80px]">
+      {/* Name & Badge */}
+      <div className="mt-3 flex items-center gap-2">
+        <span
+          className="font-semibold text-sm truncate max-w-[80px]"
+          style={{ color: colors.textPrimary }}
+        >
           {player.nickname}
         </span>
         {isYou && (
-          <Chip size="sm" color="primary" variant="flat" className="text-xs">
+          <motion.span
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="px-2 py-0.5 rounded-full text-xs font-medium"
+            style={{
+              backgroundColor: `${colors.primary}30`,
+              color: colors.primary,
+            }}
+          >
             You
-          </Chip>
+          </motion.span>
         )}
       </div>
 
       {/* Guess count */}
-      <p className="text-slate-400 text-xs mt-1">
+      <p
+        className="text-xs mt-1"
+        style={{ color: colors.textMuted }}
+      >
         {guessCount} {guessCount === 1 ? 'guess' : 'guesses'}
       </p>
 
       {/* Turn indicator */}
       {isCurrentTurn && (
-        <div className="mt-1">
-          <span className="text-emerald-400 text-xs animate-pulse">
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-2"
+        >
+          <motion.span
+            animate={{ opacity: [1, 0.5, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="text-xs font-medium"
+            style={{ color: colors.primary }}
+          >
             Playing...
-          </span>
-        </div>
+          </motion.span>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }

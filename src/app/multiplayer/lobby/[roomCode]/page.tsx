@@ -1,14 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardBody, Button, Spinner, Chip } from '@nextui-org/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useParams } from 'next/navigation';
+import { ArrowLeft, Copy, Check, Play, UserCheck, Clock, WifiOff } from 'lucide-react';
 import { useMultiplayer } from '@/contexts/MultiplayerContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import ThemeToggle from '@/components/ui/ThemeToggle';
+import GlassCard from '@/components/ui/GlassCard';
+import AnimatedButton from '@/components/ui/AnimatedButton';
 
 export default function WaitingRoomPage() {
   const router = useRouter();
   const params = useParams();
   const roomCode = params.roomCode as string;
+  const { colors } = useTheme();
 
   const {
     player,
@@ -51,13 +57,28 @@ export default function WaitingRoomPage() {
     }
   }, [gameState?.game?.status, gameState?.game?.gameId, router]);
 
-  // Show loading while checking player status
+  // Loading state
   if (!isReady || !player) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col items-center justify-center p-4">
-        <Spinner size="lg" />
-        <p className="text-slate-400 mt-4">Loading...</p>
-      </div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen flex flex-col items-center justify-center p-4"
+        style={{
+          background: `linear-gradient(135deg, ${colors.bgFrom} 0%, ${colors.bgTo} 100%)`,
+        }}
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          className="w-10 h-10 border-3 rounded-full"
+          style={{
+            borderColor: `${colors.primary}30`,
+            borderTopColor: colors.primary,
+          }}
+        />
+        <p className="mt-4" style={{ color: colors.textMuted }}>Loading...</p>
+      </motion.div>
     );
   }
 
@@ -67,7 +88,6 @@ export default function WaitingRoomPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = roomCode;
       document.body.appendChild(textArea);
@@ -108,189 +128,345 @@ export default function WaitingRoomPage() {
   // Loading state while joining
   if (!gameState?.game) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col items-center justify-center p-4">
-        <Spinner size="lg" />
-        <p className="text-slate-400 mt-4">Joining game...</p>
-        {error && (
-          <div className="mt-4 text-red-400 text-sm bg-red-400/10 p-3 rounded-lg">
-            {error}
-            <Button
-              variant="light"
-              size="sm"
-              className="ml-2 text-red-400"
-              onPress={() => router.push('/multiplayer')}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen flex flex-col items-center justify-center p-4"
+        style={{
+          background: `linear-gradient(135deg, ${colors.bgFrom} 0%, ${colors.bgTo} 100%)`,
+        }}
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          className="w-10 h-10 border-3 rounded-full"
+          style={{
+            borderColor: `${colors.primary}30`,
+            borderTopColor: colors.primary,
+          }}
+        />
+        <p className="mt-4" style={{ color: colors.textMuted }}>Joining game...</p>
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="mt-4 p-3 rounded-lg flex items-center gap-2"
+              style={{
+                backgroundColor: colors.errorBg,
+                color: colors.error,
+              }}
             >
-              Go Back
-            </Button>
-          </div>
-        )}
-      </div>
+              {error}
+              <AnimatedButton
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/multiplayer')}
+              >
+                Go Back
+              </AnimatedButton>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     );
   }
 
   const game = gameState.game;
   const players = gameState.players || [];
   const currentPlayer = players.find(p => p.playerId === player.playerId);
-  // Determine host by comparing with game.hostPlayerId
   const isHost = player.playerId === game.hostPlayerId;
-  // All connected, non-host players must be ready. Host is always considered ready.
-  // Disconnected players don't block game start
   const connectedPlayers = players.filter(p => p.isConnected !== false);
   const allReady = connectedPlayers.length >= 2 && connectedPlayers.every(p => p.isReady || p.isHost || p.playerId === game.hostPlayerId);
   const canStart = isHost && allReady && connectedPlayers.length >= 2;
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col items-center justify-center p-4">
-      {/* Room Code Header */}
-      <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-        <Button
-          variant="light"
-          className="text-slate-400"
-          onPress={handleLeaveGame}
-          isLoading={leaving}
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Leave
-        </Button>
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2,
+      },
+    },
+  };
 
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400 text-sm">Room:</span>
-          <Button
-            variant="flat"
-            className="bg-slate-700 text-white font-mono text-lg tracking-wider"
-            onPress={handleCopyCode}
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: 'spring' as const,
+        stiffness: 100,
+        damping: 15,
+      },
+    },
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen w-full"
+      style={{
+        background: `linear-gradient(135deg, ${colors.bgFrom} 0%, ${colors.bgTo} 100%)`,
+      }}
+    >
+      {/* Background Pattern */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, ${colors.bgPattern} 1px, transparent 0)`,
+          backgroundSize: '24px 24px',
+        }}
+      />
+
+      {/* Header */}
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-20">
+        <AnimatedButton
+          variant="ghost"
+          size="sm"
+          onClick={handleLeaveGame}
+          isLoading={leaving}
+          leftIcon={<ArrowLeft className="w-4 h-4" />}
+        >
+          Leave
+        </AnimatedButton>
+
+        <div className="flex items-center gap-3">
+          {/* Room Code */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleCopyCode}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-lg tracking-wider"
+            style={{
+              backgroundColor: colors.cardBg,
+              border: `1px solid ${colors.cardBorder}`,
+              color: colors.textPrimary,
+            }}
           >
             {roomCode}
-            {copied ? (
-              <svg className="w-4 h-4 ml-2 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            )}
-          </Button>
-        </div>
-      </div>
-
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Waiting Room</h1>
-        <p className="text-slate-400">
-          {players.length}/{game.maxPlayers} players
-        </p>
-      </div>
-
-      {/* Players List */}
-      <Card className="w-full max-w-md bg-slate-800/50 border border-slate-700 mb-6">
-        <CardBody className="p-4 space-y-3">
-          {players.map((p) => (
-            <div
-              key={p.playerId}
-              className={`flex items-center justify-between p-3 rounded-lg ${
-                p.playerId === player.playerId
-                  ? 'bg-blue-500/10 border border-blue-500/30'
-                  : 'bg-slate-700/30'
-              }`}
+            <motion.div
+              initial={false}
+              animate={copied ? { scale: [1, 1.2, 1] } : {}}
             >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                  style={{ backgroundColor: p.avatarColor }}
-                >
-                  {p.nickname[0].toUpperCase()}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-medium">{p.nickname}</span>
-                    {p.playerId === game.hostPlayerId && (
-                      <Chip size="sm" color="warning" variant="flat">Host</Chip>
-                    )}
-                    {p.playerId === player.playerId && (
-                      <Chip size="sm" color="primary" variant="flat">You</Chip>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {!p.isConnected ? (
-                <Chip color="danger" variant="flat">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                  </svg>
-                  Offline
-                </Chip>
-              ) : p.isReady || p.playerId === game.hostPlayerId ? (
-                <Chip color="success" variant="flat">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Ready
-                </Chip>
+              {copied ? (
+                <Check className="w-4 h-4" style={{ color: colors.success }} />
               ) : (
-                <Chip color="default" variant="flat">
-                  Waiting...
-                </Chip>
+                <Copy className="w-4 h-4" style={{ color: colors.textMuted }} />
               )}
-            </div>
-          ))}
-
-          {/* Empty slots */}
-          {Array.from({ length: game.maxPlayers - players.length }).map((_, i) => (
-            <div
-              key={`empty-${i}`}
-              className="flex items-center justify-center p-3 rounded-lg bg-slate-700/20 border border-dashed border-slate-600"
-            >
-              <span className="text-slate-500">Waiting for player...</span>
-            </div>
-          ))}
-        </CardBody>
-      </Card>
-
-      {/* Error message */}
-      {error && (
-        <div className="w-full max-w-md mb-4 text-red-400 text-sm bg-red-400/10 p-3 rounded-lg text-center">
-          {error}
+            </motion.div>
+          </motion.button>
+          <ThemeToggle />
         </div>
-      )}
-
-      {/* Action Buttons */}
-      <div className="w-full max-w-md space-y-3">
-        {isHost ? (
-          <Button
-            color="primary"
-            size="lg"
-            className="w-full"
-            onPress={handleStartGame}
-            isLoading={isLoading}
-            isDisabled={!canStart}
-          >
-            {!canStart && players.length < 2
-              ? 'Waiting for players...'
-              : !canStart
-              ? 'Waiting for all players to be ready...'
-              : 'Start Game'}
-          </Button>
-        ) : (
-          <Button
-            color={currentPlayer?.isReady ? 'default' : 'success'}
-            size="lg"
-            className="w-full"
-            onPress={handleToggleReady}
-            isLoading={isLoading}
-          >
-            {currentPlayer?.isReady ? 'Cancel Ready' : "I'm Ready!"}
-          </Button>
-        )}
       </div>
 
-      {/* Game Settings Info */}
-      <div className="mt-6 text-center text-slate-500 text-sm">
-        <p>Game Mode: Competitive 1v1</p>
-        <p>Turn Duration: {game.turnDuration} seconds</p>
+      <div className="relative min-h-screen flex flex-col items-center justify-center p-4">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="w-full max-w-md space-y-6"
+        >
+          {/* Title */}
+          <motion.div variants={itemVariants} className="text-center">
+            <h1
+              className="text-3xl font-bold mb-2"
+              style={{ color: colors.textPrimary }}
+            >
+              Waiting Room
+            </h1>
+            <p style={{ color: colors.textMuted }}>
+              {players.length}/{game.maxPlayers} players
+            </p>
+          </motion.div>
+
+          {/* Players List */}
+          <motion.div variants={itemVariants}>
+            <GlassCard className="p-4 space-y-3">
+              {players.map((p, index) => (
+                <motion.div
+                  key={p.playerId}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="flex items-center justify-between p-3 rounded-xl"
+                  style={{
+                    backgroundColor: p.playerId === player.playerId
+                      ? `${colors.primary}15`
+                      : 'rgba(0,0,0,0.2)',
+                    border: `1px solid ${p.playerId === player.playerId ? `${colors.primary}30` : 'transparent'}`,
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      animate={p.isReady || p.playerId === game.hostPlayerId ? {
+                        scale: [1, 1.05, 1],
+                      } : {}}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                      style={{ backgroundColor: p.avatarColor }}
+                    >
+                      {p.nickname[0].toUpperCase()}
+                    </motion.div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="font-medium"
+                          style={{ color: colors.textPrimary }}
+                        >
+                          {p.nickname}
+                        </span>
+                        {p.playerId === game.hostPlayerId && (
+                          <span
+                            className="text-xs px-2 py-0.5 rounded-full"
+                            style={{
+                              backgroundColor: `${colors.warning}30`,
+                              color: colors.warning,
+                            }}
+                          >
+                            Host
+                          </span>
+                        )}
+                        {p.playerId === player.playerId && (
+                          <span
+                            className="text-xs px-2 py-0.5 rounded-full"
+                            style={{
+                              backgroundColor: `${colors.primary}30`,
+                              color: colors.primary,
+                            }}
+                          >
+                            You
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {!p.isConnected ? (
+                    <div
+                      className="flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+                      style={{
+                        backgroundColor: colors.errorBg,
+                        color: colors.error,
+                      }}
+                    >
+                      <WifiOff className="w-3 h-3" />
+                      Offline
+                    </div>
+                  ) : p.isReady || p.playerId === game.hostPlayerId ? (
+                    <div
+                      className="flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+                      style={{
+                        backgroundColor: colors.successBg,
+                        color: colors.success,
+                      }}
+                    >
+                      <UserCheck className="w-3 h-3" />
+                      Ready
+                    </div>
+                  ) : (
+                    <div
+                      className="flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+                      style={{
+                        backgroundColor: colors.cardBg,
+                        color: colors.textMuted,
+                      }}
+                    >
+                      <Clock className="w-3 h-3" />
+                      Waiting...
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+
+              {/* Empty slots */}
+              {Array.from({ length: game.maxPlayers - players.length }).map((_, i) => (
+                <motion.div
+                  key={`empty-${i}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: players.length * 0.1 + i * 0.1 }}
+                  className="flex items-center justify-center p-3 rounded-xl border-2 border-dashed"
+                  style={{ borderColor: colors.cardBorder }}
+                >
+                  <span style={{ color: colors.textMuted }}>
+                    Waiting for player...
+                  </span>
+                </motion.div>
+              ))}
+            </GlassCard>
+          </motion.div>
+
+          {/* Error message */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="p-3 rounded-lg text-sm text-center"
+                style={{
+                  backgroundColor: colors.errorBg,
+                  color: colors.error,
+                }}
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Action Buttons */}
+          <motion.div variants={itemVariants} className="space-y-3">
+            {isHost ? (
+              <AnimatedButton
+                variant="primary"
+                size="lg"
+                fullWidth
+                glow={canStart}
+                onClick={handleStartGame}
+                isLoading={isLoading}
+                disabled={!canStart}
+                leftIcon={<Play className="w-5 h-5" />}
+              >
+                {!canStart && players.length < 2
+                  ? 'Waiting for players...'
+                  : !canStart
+                  ? 'Waiting for all players...'
+                  : 'Start Game'}
+              </AnimatedButton>
+            ) : (
+              <AnimatedButton
+                variant={currentPlayer?.isReady ? 'secondary' : 'primary'}
+                size="lg"
+                fullWidth
+                glow={!currentPlayer?.isReady}
+                onClick={handleToggleReady}
+                isLoading={isLoading}
+                leftIcon={<UserCheck className="w-5 h-5" />}
+              >
+                {currentPlayer?.isReady ? 'Cancel Ready' : "I'm Ready!"}
+              </AnimatedButton>
+            )}
+          </motion.div>
+
+          {/* Game Settings Info */}
+          <motion.div
+            variants={itemVariants}
+            className="text-center space-y-1"
+          >
+            <p className="text-sm" style={{ color: colors.textMuted }}>
+              Game Mode: Competitive 1v1
+            </p>
+            <p className="text-sm" style={{ color: colors.textMuted }}>
+              Turn Duration: {game.turnDuration} seconds
+            </p>
+          </motion.div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }

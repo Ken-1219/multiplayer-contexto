@@ -1,9 +1,16 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Card, CardBody, Button, Input, Spinner } from '@nextui-org/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useParams } from 'next/navigation';
+import { Sparkles, Home, Flag } from 'lucide-react';
 import { useMultiplayer } from '@/contexts/MultiplayerContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import ThemeToggle from '@/components/ui/ThemeToggle';
+import GlassCard from '@/components/ui/GlassCard';
+import GuessItem from '@/components/ui/GuessItem';
+import AnimatedButton from '@/components/ui/AnimatedButton';
+import AnimatedInput from '@/components/ui/AnimatedInput';
 import TurnIndicator from '@/components/multiplayer/TurnIndicator';
 import TurnTimer from '@/components/multiplayer/TurnTimer';
 import PlayerCard from '@/components/multiplayer/PlayerCard';
@@ -13,6 +20,7 @@ export default function MultiplayerGamePage() {
   const router = useRouter();
   const params = useParams();
   const gameId = params.gameId as string;
+  const { colors } = useTheme();
 
   const {
     player,
@@ -56,7 +64,6 @@ export default function MultiplayerGamePage() {
     }
   }, [gameState?.game?.status]);
 
-  // Compute isMyTurn early for use in effects
   const isMyTurn = Boolean(player && gameState?.game?.currentTurnPlayerId === player.playerId);
 
   // Focus input when it's player's turn
@@ -66,23 +73,52 @@ export default function MultiplayerGamePage() {
     }
   }, [isMyTurn]);
 
-  // Show loading while checking player status
+  // Loading state
   if (!isReady || !player) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col items-center justify-center p-4">
-        <Spinner size="lg" />
-        <p className="text-slate-400 mt-4">Loading...</p>
-      </div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen flex flex-col items-center justify-center p-4"
+        style={{
+          background: `linear-gradient(135deg, ${colors.bgFrom} 0%, ${colors.bgTo} 100%)`,
+        }}
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          className="w-10 h-10 border-3 rounded-full"
+          style={{
+            borderColor: `${colors.primary}30`,
+            borderTopColor: colors.primary,
+          }}
+        />
+        <p className="mt-4" style={{ color: colors.textMuted }}>Loading...</p>
+      </motion.div>
     );
   }
 
-  // Loading state
   if (!gameState?.game) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col items-center justify-center p-4">
-        <Spinner size="lg" />
-        <p className="text-slate-400 mt-4">Loading game...</p>
-      </div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen flex flex-col items-center justify-center p-4"
+        style={{
+          background: `linear-gradient(135deg, ${colors.bgFrom} 0%, ${colors.bgTo} 100%)`,
+        }}
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          className="w-10 h-10 border-3 rounded-full"
+          style={{
+            borderColor: `${colors.primary}30`,
+            borderTopColor: colors.primary,
+          }}
+        />
+        <p className="mt-4" style={{ color: colors.textMuted }}>Loading game...</p>
+      </motion.div>
     );
   }
 
@@ -92,10 +128,19 @@ export default function MultiplayerGamePage() {
 
   const currentPlayer = players.find(p => p.playerId === player.playerId);
   const opponent = players.find(p => p.playerId !== player.playerId);
-  // isMyTurn is already computed above for the useEffect
 
-  const myGuesses = guesses.filter(g => g.playerId === player.playerId);
-  const opponentGuesses = guesses.filter(g => g.playerId !== player.playerId);
+  const myGuesses = guesses
+    .filter(g => g.playerId === player.playerId)
+    .sort((a, b) => a.distance - b.distance);
+  const opponentGuesses = guesses
+    .filter(g => g.playerId !== player.playerId)
+    .sort((a, b) => a.distance - b.distance);
+
+  const maxDistance = Math.max(
+    ...myGuesses.map(g => g.distance),
+    ...opponentGuesses.map(g => g.distance),
+    1
+  );
 
   const handleSubmitGuess = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,198 +184,280 @@ export default function MultiplayerGamePage() {
   const isWinner = game.winnerId === player.playerId;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col p-4">
-      {/* Header with players */}
-      <div className="flex justify-between items-start mb-4">
-        <PlayerCard
-          player={currentPlayer!}
-          isCurrentTurn={isMyTurn}
-          guessCount={myGuesses.length}
-          isYou={true}
-        />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen w-full"
+      style={{
+        background: `linear-gradient(135deg, ${colors.bgFrom} 0%, ${colors.bgTo} 100%)`,
+      }}
+    >
+      {/* Background Pattern */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, ${colors.bgPattern} 1px, transparent 0)`,
+          backgroundSize: '24px 24px',
+        }}
+      />
 
-        <div className="text-center">
-          <TurnIndicator
-            isMyTurn={isMyTurn}
-            currentPlayerName={isMyTurn ? 'Your' : `${opponent?.nickname}'s`}
-            turnNumber={game.turnNumber}
+      {/* Main Container */}
+      <div className="relative min-h-screen w-full flex flex-col p-4">
+        {/* Header with Theme Toggle and Home */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between mb-4"
+        >
+          <AnimatedButton
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push('/')}
+            leftIcon={<Home className="w-4 h-4" />}
+          >
+            Home
+          </AnimatedButton>
+          <ThemeToggle />
+        </motion.div>
+
+        {/* Title */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-center mb-6"
+        >
+          <div className="flex items-center justify-center gap-2">
+            <motion.div
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+            >
+              <Sparkles className="h-6 w-6" style={{ color: colors.primary }} />
+            </motion.div>
+            <h1
+              className="text-3xl md:text-4xl font-black tracking-tight"
+              style={{
+                background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              CONTEXTO
+            </h1>
+            <motion.div
+              animate={{ rotate: [0, -10, 10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3, delay: 0.5 }}
+            >
+              <Sparkles className="h-6 w-6" style={{ color: colors.accent }} />
+            </motion.div>
+          </div>
+          <p className="text-sm mt-1" style={{ color: colors.textMuted }}>
+            Multiplayer Mode
+          </p>
+        </motion.div>
+
+        {/* Players and Turn Info */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex justify-between items-start mb-4 gap-4"
+        >
+          <PlayerCard
+            player={currentPlayer!}
+            isCurrentTurn={isMyTurn}
+            guessCount={myGuesses.length}
+            isYou={true}
           />
-          {game.status === 'ACTIVE' && (
-            <TurnTimer
-              duration={game.turnDuration}
-              turnStartedAt={game.turnStartedAt || Date.now()}
+
+          <div className="flex flex-col items-center">
+            <TurnIndicator
               isMyTurn={isMyTurn}
-              isPaused={isLoading && isMyTurn}
-              onTimeout={handleTimeout}
+              currentPlayerName={isMyTurn ? 'Your' : `${opponent?.nickname}'s`}
+              turnNumber={game.turnNumber}
+            />
+            {game.status === 'ACTIVE' && (
+              <TurnTimer
+                duration={game.turnDuration}
+                turnStartedAt={game.turnStartedAt || Date.now()}
+                isMyTurn={isMyTurn}
+                isPaused={isLoading && isMyTurn}
+                onTimeout={handleTimeout}
+              />
+            )}
+          </div>
+
+          {opponent && (
+            <PlayerCard
+              player={opponent}
+              isCurrentTurn={!isMyTurn}
+              guessCount={opponentGuesses.length}
+              isYou={false}
             />
           )}
-        </div>
+        </motion.div>
 
-        {opponent && (
-          <PlayerCard
-            player={opponent}
-            isCurrentTurn={!isMyTurn}
-            guessCount={opponentGuesses.length}
-            isYou={false}
-          />
-        )}
-      </div>
-
-      {/* Guess Input */}
-      <Card className="mb-4 bg-slate-800/50 border border-slate-700">
-        <CardBody className="p-4">
-          <form onSubmit={handleSubmitGuess} className="flex gap-2">
-            <Input
-              ref={inputRef}
-              aria-label="Guess input"
-              placeholder={isMyTurn ? "Enter your guess..." : "Waiting for opponent..."}
-              value={guessInput}
-              onChange={(e) => setGuessInput(e.target.value)}
-              isDisabled={!isMyTurn || isLoading}
-              variant="bordered"
-              size="lg"
-              classNames={{
-                input: 'text-white',
-                inputWrapper: 'bg-slate-700/50 border-slate-600 hover:bg-slate-700',
-              }}
-            />
-            <Button
+        {/* Input Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-4"
+        >
+          <form onSubmit={handleSubmitGuess} className="flex gap-3">
+            <div className="flex-1">
+              <AnimatedInput
+                ref={inputRef}
+                value={guessInput}
+                onChange={(e) => setGuessInput(e.target.value)}
+                placeholder={isMyTurn ? 'Enter your guess...' : 'Waiting for opponent...'}
+                disabled={!isMyTurn || isLoading}
+                isLoading={isLoading}
+              />
+            </div>
+            <AnimatedButton
               type="submit"
-              color="primary"
+              variant="primary"
+              size="lg"
+              disabled={!isMyTurn || !guessInput.trim()}
               isLoading={isLoading}
-              isDisabled={!isMyTurn || !guessInput.trim()}
             >
               Guess
-            </Button>
+            </AnimatedButton>
           </form>
 
-          {(localError || error) && (
-            <p className="text-red-400 text-sm mt-2">{localError || error}</p>
-          )}
-        </CardBody>
-      </Card>
+          {/* Error */}
+          <AnimatePresence>
+            {(localError || error) && (
+              <motion.p
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="text-sm mt-2 text-center"
+                style={{ color: colors.error }}
+              >
+                {localError || error}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
-      {/* Guess Lists */}
-      <div className="flex-1 grid grid-cols-2 gap-4 overflow-hidden">
-        {/* Your Guesses */}
-        <Card className="bg-slate-800/50 border border-slate-700 overflow-hidden">
-          <CardBody className="p-0">
-            <div className="p-3 bg-slate-700/50 border-b border-slate-600">
-              <h3 className="text-white font-medium text-center">Your Guesses ({myGuesses.length})</h3>
+        {/* Guess Lists - Side by Side */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="flex-1 grid grid-cols-2 gap-4 overflow-hidden"
+        >
+          {/* Your Guesses */}
+          <GlassCard className="overflow-hidden flex flex-col">
+            <div
+              className="p-3 border-b"
+              style={{
+                backgroundColor: `${colors.primary}10`,
+                borderColor: colors.cardBorder,
+              }}
+            >
+              <h3
+                className="font-semibold text-center"
+                style={{ color: colors.textPrimary }}
+              >
+                Your Guesses ({myGuesses.length})
+              </h3>
             </div>
-            <div className="overflow-y-auto max-h-[400px] p-2">
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {myGuesses.length === 0 ? (
-                <p className="text-slate-500 text-center py-4">No guesses yet</p>
+                <p
+                  className="text-center py-8 text-sm"
+                  style={{ color: colors.textMuted }}
+                >
+                  No guesses yet
+                </p>
               ) : (
-                <div className="space-y-1">
-                  {myGuesses.map((guess) => (
-                    <div
-                      key={guess.guessId}
-                      className={`flex items-center justify-between p-2 rounded ${
-                        guess.isCorrect
-                          ? 'bg-emerald-500/20 border border-emerald-500/50'
-                          : guess.distance <= 100
-                          ? 'bg-yellow-500/10'
-                          : guess.distance <= 500
-                          ? 'bg-orange-500/10'
-                          : 'bg-slate-700/30'
-                      }`}
-                    >
-                      <span className="text-white">{guess.word}</span>
-                      <span
-                        className={`font-mono font-bold ${
-                          guess.isCorrect
-                            ? 'text-emerald-400'
-                            : guess.distance <= 100
-                            ? 'text-yellow-400'
-                            : guess.distance <= 500
-                            ? 'text-orange-400'
-                            : 'text-slate-400'
-                        }`}
-                      >
-                        {guess.isCorrect ? '1' : guess.distance}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                myGuesses.map((guess, index) => (
+                  <GuessItem
+                    key={guess.guessId}
+                    word={guess.word}
+                    distance={guess.isCorrect ? 1 : guess.distance}
+                    isTopGuess={index === 0}
+                    isCorrect={guess.isCorrect}
+                    index={index}
+                    maxDistance={maxDistance}
+                  />
+                ))
               )}
             </div>
-          </CardBody>
-        </Card>
+          </GlassCard>
 
-        {/* Opponent's Guesses */}
-        <Card className="bg-slate-800/50 border border-slate-700 overflow-hidden">
-          <CardBody className="p-0">
-            <div className="p-3 bg-slate-700/50 border-b border-slate-600">
-              <h3 className="text-white font-medium text-center">
+          {/* Opponent's Guesses */}
+          <GlassCard className="overflow-hidden flex flex-col">
+            <div
+              className="p-3 border-b"
+              style={{
+                backgroundColor: `${colors.accent}10`,
+                borderColor: colors.cardBorder,
+              }}
+            >
+              <h3
+                className="font-semibold text-center"
+                style={{ color: colors.textPrimary }}
+              >
                 {opponent?.nickname || 'Opponent'}&apos;s Guesses ({opponentGuesses.length})
               </h3>
             </div>
-            <div className="overflow-y-auto max-h-[400px] p-2">
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {opponentGuesses.length === 0 ? (
-                <p className="text-slate-500 text-center py-4">No guesses yet</p>
+                <p
+                  className="text-center py-8 text-sm"
+                  style={{ color: colors.textMuted }}
+                >
+                  No guesses yet
+                </p>
               ) : (
-                <div className="space-y-1">
-                  {opponentGuesses.map((guess) => (
-                    <div
-                      key={guess.guessId}
-                      className={`flex items-center justify-between p-2 rounded ${
-                        guess.isCorrect
-                          ? 'bg-emerald-500/20 border border-emerald-500/50'
-                          : guess.distance <= 100
-                          ? 'bg-yellow-500/10'
-                          : guess.distance <= 500
-                          ? 'bg-orange-500/10'
-                          : 'bg-slate-700/30'
-                      }`}
-                    >
-                      <span className="text-white">{guess.word}</span>
-                      <span
-                        className={`font-mono font-bold ${
-                          guess.isCorrect
-                            ? 'text-emerald-400'
-                            : guess.distance <= 100
-                            ? 'text-yellow-400'
-                            : guess.distance <= 500
-                            ? 'text-orange-400'
-                            : 'text-slate-400'
-                        }`}
-                      >
-                        {guess.isCorrect ? '1' : guess.distance}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                opponentGuesses.map((guess, index) => (
+                  <GuessItem
+                    key={guess.guessId}
+                    word={guess.word}
+                    distance={guess.isCorrect ? 1 : guess.distance}
+                    isTopGuess={index === 0}
+                    isCorrect={guess.isCorrect}
+                    index={index}
+                    maxDistance={maxDistance}
+                  />
+                ))
               )}
             </div>
-          </CardBody>
-        </Card>
-      </div>
+          </GlassCard>
+        </motion.div>
 
-      {/* Footer */}
-      <div className="mt-4 text-center">
-        <Button
-          variant="light"
-          color="danger"
-          size="sm"
-          onPress={handleLeaveGame}
+        {/* Footer - Give Up Button */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="mt-4 text-center"
         >
-          Give Up
-        </Button>
+          <AnimatedButton
+            variant="danger"
+            size="sm"
+            onClick={handleLeaveGame}
+            leftIcon={<Flag className="w-4 h-4" />}
+          >
+            Give Up
+          </AnimatedButton>
+        </motion.div>
       </div>
 
       {/* Game Result Modal */}
-      {showResult && (
-        <GameResult
-          isOpen={showResult}
-          isWinner={isWinner}
-          winner={players.find(p => p.playerId === game.winnerId) || null}
-          secretWord={game.secretWord}
-          myGuessCount={myGuesses.length}
-          opponentGuessCount={opponentGuesses.length}
-          onExit={handleExit}
-        />
-      )}
-    </div>
+      <GameResult
+        isOpen={showResult}
+        isWinner={isWinner}
+        winner={players.find(p => p.playerId === game.winnerId) || null}
+        secretWord={game.secretWord}
+        myGuessCount={myGuesses.length}
+        opponentGuessCount={opponentGuesses.length}
+        onExit={handleExit}
+      />
+    </motion.div>
   );
 }
