@@ -154,11 +154,9 @@ export default function Game({ className }: GameProps) {
                   <Sparkles className="h-7 w-7" style={{ color: colors.primary }} />
                 </motion.div>
                 <h1
-                  className="text-5xl md:text-6xl font-black tracking-tight"
+                  className="text-5xl md:text-6xl font-black tracking-tight bg-clip-text text-transparent"
                   style={{
-                    background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
+                    backgroundImage: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
                   }}
                 >
                   CONTEXTO
@@ -435,11 +433,9 @@ export default function Game({ className }: GameProps) {
           >
             <div className="flex items-center justify-center gap-2">
               <span
-                className="text-xl font-black"
+                className="text-xl font-black bg-clip-text text-transparent"
                 style={{
-                  background: `linear-gradient(135deg, ${colors.textMuted}, ${colors.primary})`,
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  backgroundImage: `linear-gradient(135deg, ${colors.textMuted}, ${colors.primary})`,
                 }}
               >
                 contexto

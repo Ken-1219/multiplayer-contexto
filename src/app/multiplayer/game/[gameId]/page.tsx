@@ -235,11 +235,9 @@ export default function MultiplayerGamePage() {
               <Sparkles className="h-6 w-6" style={{ color: colors.primary }} />
             </motion.div>
             <h1
-              className="text-3xl md:text-4xl font-black tracking-tight"
+              className="text-3xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent"
               style={{
-                background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                backgroundImage: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
               }}
             >
               CONTEXTO
@@ -376,7 +374,7 @@ export default function MultiplayerGamePage() {
               ) : (
                 myGuesses.map((guess, index) => (
                   <GuessItem
-                    key={guess.guessId}
+                    key={`${guess.guessId}-${guess.word}-${index}`}
                     word={guess.word}
                     distance={guess.isCorrect ? 1 : guess.distance}
                     isTopGuess={index === 0}
@@ -416,7 +414,7 @@ export default function MultiplayerGamePage() {
               ) : (
                 opponentGuesses.map((guess, index) => (
                   <GuessItem
-                    key={guess.guessId}
+                    key={`${guess.guessId}-${guess.word}-${index}`}
                     word={guess.word}
                     distance={guess.isCorrect ? 1 : guess.distance}
                     isTopGuess={index === 0}

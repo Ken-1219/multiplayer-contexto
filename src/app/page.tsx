@@ -82,11 +82,9 @@ export default function Home() {
                 <Sparkles className="h-8 w-8" style={{ color: colors.primary }} />
               </motion.div>
               <h1
-                className="text-5xl md:text-7xl font-black tracking-tight"
+                className="text-5xl md:text-7xl font-black tracking-tight bg-clip-text text-transparent"
                 style={{
-                  background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  backgroundImage: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
                 }}
               >
                 CONTEXTO
