@@ -10,7 +10,6 @@ interface GameResultProps {
   secretWord: string;
   myGuessCount: number;
   opponentGuessCount: number;
-  onPlayAgain: () => void;
   onExit: () => void;
 }
 
@@ -21,7 +20,6 @@ export default function GameResult({
   secretWord,
   myGuessCount,
   opponentGuessCount,
-  onPlayAgain,
   onExit,
 }: GameResultProps) {
   return (
@@ -86,21 +84,14 @@ export default function GameResult({
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col gap-3 mt-4">
+          {/* Action Button */}
+          <div className="mt-4">
             <Button
               color="primary"
               size="lg"
-              onPress={onPlayAgain}
-            >
-              Play Again
-            </Button>
-            <Button
-              variant="light"
               onPress={onExit}
-              className="text-slate-400"
             >
-              Exit to Home
+              Exit Game
             </Button>
           </div>
         </ModalBody>

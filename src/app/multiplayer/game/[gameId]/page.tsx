@@ -130,16 +130,10 @@ export default function MultiplayerGamePage() {
     }
   };
 
-  const handlePlayAgain = () => {
-    setShowResult(false);
-    clearGameState();
-    router.push('/multiplayer');
-  };
-
   const handleExit = () => {
     setShowResult(false);
     clearGameState();
-    router.push('/');
+    router.push('/multiplayer');
   };
 
   const isWinner = game.winnerId === player.playerId;
@@ -334,7 +328,6 @@ export default function MultiplayerGamePage() {
           secretWord={game.secretWord}
           myGuessCount={myGuesses.length}
           opponentGuessCount={opponentGuesses.length}
-          onPlayAgain={handlePlayAgain}
           onExit={handleExit}
         />
       )}
