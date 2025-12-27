@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { createGame, joinGame, getPlayer } from '@/lib/appsync-client';
+import { createGame, joinGame, getPlayer, updatePlayerConnection } from '@/lib/appsync-client';
 import { DAILY_WORDS } from '@/lib/game-service';
 import {
   generateRoomCode,
@@ -118,6 +118,9 @@ export async function POST(
       avatarColor: typedPlayer.avatarColor,
       joinOrder: 1,
     });
+
+    // Set initial lastActiveAt so host isn't immediately marked as disconnected
+    await updatePlayerConnection(gameId, playerId, true);
 
     return NextResponse.json({
       success: true,

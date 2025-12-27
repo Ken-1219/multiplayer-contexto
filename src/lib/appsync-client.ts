@@ -134,6 +134,7 @@ export async function getGameState(gameId: string) {
           score
           guessCount
           foundWord
+          lastActiveAt
         }
         guesses {
           gameId
@@ -506,6 +507,60 @@ export async function endGame(
     status,
   });
   return result.endGame;
+}
+
+/**
+ * Update player connection status and lastActiveAt
+ */
+export async function updatePlayerConnection(
+  gameId: string,
+  playerId: string,
+  isConnected: boolean
+) {
+  const mutation = `
+    mutation UpdatePlayerConnection($gameId: ID!, $playerId: ID!, $isConnected: Boolean!, $lastActiveAt: AWSTimestamp!) {
+      updatePlayerConnection(gameId: $gameId, playerId: $playerId, isConnected: $isConnected, lastActiveAt: $lastActiveAt) {
+        gameId
+        playerId
+        isConnected
+        lastActiveAt
+      }
+    }
+  `;
+
+  const result = await executeGraphQL<{ updatePlayerConnection: unknown }>(mutation, {
+    gameId,
+    playerId,
+    isConnected,
+    lastActiveAt: Date.now(),
+  });
+  return result.updatePlayerConnection;
+}
+
+/**
+ * Update player's lastActiveAt timestamp (heartbeat)
+ */
+export async function updatePlayerHeartbeat(
+  gameId: string,
+  playerId: string
+) {
+  const mutation = `
+    mutation UpdatePlayerConnection($gameId: ID!, $playerId: ID!, $isConnected: Boolean!, $lastActiveAt: AWSTimestamp!) {
+      updatePlayerConnection(gameId: $gameId, playerId: $playerId, isConnected: $isConnected, lastActiveAt: $lastActiveAt) {
+        gameId
+        playerId
+        lastActiveAt
+      }
+    }
+  `;
+
+  const result = await executeGraphQL<{ updatePlayerConnection: unknown }>(mutation, {
+    gameId,
+    playerId,
+    isConnected: true,
+    lastActiveAt: Date.now(),
+  });
+  return result.updatePlayerConnection;
 }
 
 // ============================================================================

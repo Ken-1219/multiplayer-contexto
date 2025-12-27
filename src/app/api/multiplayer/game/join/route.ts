@@ -4,6 +4,7 @@ import {
   getGameState,
   joinGame,
   getPlayer,
+  updatePlayerConnection,
 } from '@/lib/appsync-client';
 import {
   validateRoomCode,
@@ -73,23 +74,43 @@ export async function POST(
       );
     }
 
-    // Check game status
-    if (game.status !== 'WAITING') {
-      return NextResponse.json(
-        { success: false, error: 'This game has already started or ended.' },
-        { status: 400 }
-      );
-    }
-
     // Get current players
     const gameState = await getGameState(game.gameId);
     const players = (gameState?.players || []) as GamePlayer[];
 
-    // Check if player is already in game
+    // Check if player is already in game (reconnection case)
     const existingPlayer = players.find((p) => p.playerId === playerId);
     if (existingPlayer) {
+      // Allow reconnection for WAITING or ACTIVE games
+      if (game.status === 'WAITING' || game.status === 'ACTIVE') {
+        // Update player connection status
+        await updatePlayerConnection(game.gameId, playerId, true);
+
+        console.log(`[API] Player ${playerId} reconnected to game ${game.gameId}`);
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            gameId: game.gameId,
+            roomCode: game.roomCode,
+            gameMode: game.gameMode,
+            players,
+            isReconnect: true,
+          },
+        });
+      } else {
+        // Game has ended
+        return NextResponse.json(
+          { success: false, error: 'This game has already ended.' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // For new players, only allow joining WAITING games
+    if (game.status !== 'WAITING') {
       return NextResponse.json(
-        { success: false, error: 'You are already in this game.' },
+        { success: false, error: 'This game has already started or ended.' },
         { status: 400 }
       );
     }
@@ -120,6 +141,9 @@ export async function POST(
         { status: 500 }
       );
     }
+
+    // Set initial lastActiveAt so player isn't immediately marked as disconnected
+    await updatePlayerConnection(game.gameId, playerId, true);
 
     // Get updated players list
     const updatedGameState = await getGameState(game.gameId);

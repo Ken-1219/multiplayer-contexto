@@ -29,8 +29,38 @@ import {
 
 const MultiplayerContext = createContext<MultiplayerContextType | null>(null);
 
-// Polling interval in ms
-const POLL_INTERVAL = 2000;
+// Constants
+const POLL_INTERVAL = 2000;           // 2 seconds
+const DISCONNECT_TIMEOUT = 10000;     // 10 seconds
+const WAITING_GAME_TTL = 15 * 60000;  // 15 minutes
+
+// Session storage key
+const SESSION_KEY = 'multiplayerSession';
+
+// Helper to save session to localStorage
+function saveSession(gameId: string, roomCode: string) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ gameId, roomCode, timestamp: Date.now() }));
+  }
+}
+
+// Helper to get session from localStorage
+function getSession(): { gameId: string; roomCode: string; timestamp: number } | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const session = localStorage.getItem(SESSION_KEY);
+    return session ? JSON.parse(session) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Helper to clear session
+function clearSession() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(SESSION_KEY);
+  }
+}
 
 export function MultiplayerProvider({ children }: { children: React.ReactNode }) {
   // Player state
@@ -46,20 +76,61 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
   // Polling ref
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load player from cookie on mount
+  // Load player from cookie on mount and restore session
   useEffect(() => {
-    const loadPlayer = async () => {
+    const loadPlayerAndSession = async () => {
       try {
+        // Load player first
         const res = await fetch('/api/multiplayer/player/me');
         const data = await res.json();
         if (data.success && data.data) {
           setPlayer(data.data);
+
+          // Check for existing session to restore
+          const session = getSession();
+          if (session) {
+            console.log('[Multiplayer] Found existing session, attempting to restore:', session.roomCode);
+
+            // Check if session is not too old (use game TTL as max age)
+            const sessionAge = Date.now() - session.timestamp;
+            if (sessionAge < WAITING_GAME_TTL) {
+              // Try to reconnect by fetching game state
+              try {
+                const stateRes = await fetch(`/api/multiplayer/game/state?gameId=${session.gameId}`);
+                const stateData = await stateRes.json();
+
+                if (stateData.success && stateData.data) {
+                  const game = stateData.data.game;
+                  // Only restore if game is still active
+                  if (game.status === 'WAITING' || game.status === 'ACTIVE') {
+                    setGameState(stateData.data);
+                    console.log('[Multiplayer] Session restored successfully');
+                  } else {
+                    // Game ended, clear session
+                    clearSession();
+                    console.log('[Multiplayer] Game ended, clearing session');
+                  }
+                } else {
+                  // Game not found, clear session
+                  clearSession();
+                  console.log('[Multiplayer] Game not found, clearing session');
+                }
+              } catch (e) {
+                console.error('[Multiplayer] Failed to restore session:', e);
+                clearSession();
+              }
+            } else {
+              // Session too old, clear it
+              clearSession();
+              console.log('[Multiplayer] Session expired, clearing');
+            }
+          }
         }
       } catch (e) {
         console.error('Failed to load player:', e);
       }
     };
-    loadPlayer();
+    loadPlayerAndSession();
   }, []);
 
   // Start/stop polling based on game state
@@ -73,25 +144,25 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
     return () => stopPolling();
   }, [gameState?.game?.gameId, gameState?.game?.status]);
 
-  // Disconnect detection - call leave API when browser closes
+  // Show confirmation when leaving an active game (but don't auto-leave on refresh)
+  // Disconnection is now handled via heartbeat timeout instead
   useEffect(() => {
     if (!gameState?.game?.gameId || gameState.game.status === 'COMPLETED') return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Send leave request via sendBeacon (works even when page is closing)
-      const data = JSON.stringify({ gameId: gameState.game.gameId });
-      navigator.sendBeacon('/api/multiplayer/game/leave', data);
-
-      // Show confirmation dialog
-      e.preventDefault();
-      e.returnValue = 'You are in an active game. Leaving will forfeit the match.';
-      return e.returnValue;
+      // Only show confirmation for ACTIVE games, not WAITING lobbies
+      // Don't call leave API - rely on heartbeat timeout for disconnect detection
+      // This allows players to refresh and reconnect
+      if (gameState?.game?.status === 'ACTIVE') {
+        e.preventDefault();
+        e.returnValue = 'You are in an active game. Leaving will forfeit the match.';
+        return e.returnValue;
+      }
     };
 
     const handleVisibilityChange = () => {
-      // Optional: handle tab switching/minimizing
+      // Log when tab is hidden (could add reconnection logic here in future)
       if (document.visibilityState === 'hidden' && gameState?.game?.status === 'ACTIVE') {
-        // Could implement reconnection logic here
         console.log('[Multiplayer] Tab hidden while in game');
       }
     };
@@ -110,6 +181,15 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
 
     pollIntervalRef.current = setInterval(async () => {
       try {
+        // Send heartbeat to update lastActiveAt (fire and forget)
+        fetch('/api/multiplayer/game/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gameId }),
+        }).catch(() => {
+          // Ignore heartbeat errors silently
+        });
+
         const res = await fetch(`/api/multiplayer/game/state?gameId=${gameId}`);
         const data = await res.json();
 
@@ -259,6 +339,8 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
 
       if (stateData.success) {
         setGameState(stateData.data);
+        // Save session to localStorage for reconnection on refresh
+        saveSession(data.data.gameId, data.data.roomCode);
       }
 
       toast.success(`Game created! Room code: ${data.data.roomCode}`);
@@ -297,9 +379,11 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
 
       if (stateData.success) {
         setGameState(stateData.data);
+        // Save session to localStorage for reconnection on refresh
+        saveSession(data.data.gameId, data.data.roomCode);
       }
 
-      toast.success('Joined game successfully!');
+      toast.success(data.data.isReconnect ? 'Reconnected to game!' : 'Joined game successfully!');
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to join game';
       setError(message);
@@ -326,6 +410,8 @@ export function MultiplayerProvider({ children }: { children: React.ReactNode })
 
       stopPolling();
       setGameState(null);
+      // Clear session from localStorage on explicit leave
+      clearSession();
       toast.info('Left the game');
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to leave game';

@@ -131,10 +131,13 @@ export default function WaitingRoomPage() {
   const game = gameState.game;
   const players = gameState.players || [];
   const currentPlayer = players.find(p => p.playerId === player.playerId);
-  // Determine host by comparing with game.hostPlayerId (more reliable than isHost field)
+  // Determine host by comparing with game.hostPlayerId
   const isHost = player.playerId === game.hostPlayerId;
-  const allReady = players.length >= 2 && players.every(p => p.isReady || p.playerId === game.hostPlayerId);
-  const canStart = isHost && allReady && players.length >= 2;
+  // All connected, non-host players must be ready. Host is always considered ready.
+  // Disconnected players don't block game start
+  const connectedPlayers = players.filter(p => p.isConnected !== false);
+  const allReady = connectedPlayers.length >= 2 && connectedPlayers.every(p => p.isReady || p.isHost || p.playerId === game.hostPlayerId);
+  const canStart = isHost && allReady && connectedPlayers.length >= 2;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col items-center justify-center p-4">
@@ -212,7 +215,14 @@ export default function WaitingRoomPage() {
                 </div>
               </div>
 
-              {p.isReady || p.playerId === game.hostPlayerId ? (
+              {!p.isConnected ? (
+                <Chip color="danger" variant="flat">
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                  Offline
+                </Chip>
+              ) : p.isReady || p.playerId === game.hostPlayerId ? (
                 <Chip color="success" variant="flat">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

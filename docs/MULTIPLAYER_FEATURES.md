@@ -11,6 +11,7 @@
 7. [Frontend Integration](#7-frontend-integration)
 8. [Implementation Phases](#8-implementation-phases)
 9. [Free Tier Limits](#9-free-tier-limits)
+10. [Connection & State Management](#10-connection--state-management)
 
 ---
 
@@ -1410,3 +1411,98 @@ src/app/
 - **Max API calls/day**: ~8,000
 
 These limits are well above typical usage for a small-scale multiplayer game.
+
+---
+
+## 10. Connection & State Management
+
+### Session Persistence
+
+Player game sessions are persisted in localStorage to handle page refreshes gracefully:
+
+```typescript
+// Session data structure
+interface MultiplayerSession {
+  gameId: string;
+  roomCode: string;
+  timestamp: number;  // Used for TTL validation
+}
+```
+
+**Behavior:**
+- On game join/create: Session saved to `localStorage`
+- On page refresh: Session restored, player reconnects automatically
+- On explicit leave: Session cleared
+- Session expires after 15 minutes (matches game TTL)
+
+### Heartbeat System
+
+Players send heartbeat signals every 2 seconds during polling to indicate they're still connected:
+
+```
+Client                           Server
+  |                                |
+  |-- POST /game/heartbeat ------->|  (updates lastActiveAt)
+  |<-- 200 OK --------------------|
+  |                                |
+  |-- GET /game/state ------------>|  (check all player lastActiveAt)
+  |<-- Game state + updated -------|  (mark disconnected if > 10s)
+      connection status            |
+```
+
+**Configuration:**
+- `POLL_INTERVAL`: 2 seconds (heartbeat frequency)
+- `DISCONNECT_TIMEOUT`: 10 seconds (time before marking player offline)
+- `WAITING_GAME_TTL`: 15 minutes (auto-expire idle lobbies)
+
+### Connection States
+
+Players can be in the following connection states:
+
+| State | `isConnected` | Description |
+|-------|---------------|-------------|
+| Connected | `true` | Player actively polling, heartbeat within 10s |
+| Disconnected | `false` | No heartbeat for >10s, shown as "Offline" |
+| Reconnected | `true` | Previously disconnected, now active again |
+
+### Reconnection Flow
+
+When a player refreshes or temporarily loses connection:
+
+1. Page loads, checks `localStorage` for existing session
+2. If session exists and not expired:
+   - Fetch game state from server
+   - If game is WAITING/ACTIVE, restore session
+   - Update player's `isConnected: true` and `lastActiveAt`
+3. If session expired or game ended:
+   - Clear `localStorage`
+   - Redirect to multiplayer home
+
+### Game Expiration
+
+**WAITING Games:**
+- Auto-expire after 15 minutes of inactivity
+- Status changed to `ABANDONED`
+- Players see "Game expired due to inactivity" error
+
+**ACTIVE Games:**
+- Continue until completion regardless of disconnections
+- Disconnected players shown as "Offline"
+- Can reconnect at any time during the game
+
+### API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/multiplayer/game/heartbeat` | POST | Update `lastActiveAt` timestamp |
+| `/api/multiplayer/game/state` | GET | Get game state + check connection timeouts |
+| `/api/multiplayer/game/join` | POST | Join game or reconnect if already in game |
+
+### Error Handling
+
+| Scenario | Handling |
+|----------|----------|
+| Heartbeat fails | Ignored silently (connection timeout will handle) |
+| Game state 410 (Gone) | Game expired, clear session, show error |
+| Join fails (game ended) | Clear session, redirect to home |
+| Reconnect fails | Show error, option to go back |

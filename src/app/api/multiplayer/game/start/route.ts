@@ -78,8 +78,8 @@ export async function POST(
       );
     }
 
-    // Verify all players are ready
-    const allReady = players.every((p) => p.isReady || p.isHost);
+    // Verify all players are ready (host is always considered ready)
+    const allReady = players.every((p) => p.isReady || p.playerId === game.hostPlayerId);
     if (!allReady) {
       return NextResponse.json(
         { success: false, error: 'All players must be ready to start' },
