@@ -166,6 +166,7 @@ export default function MultiplayerGamePage() {
               duration={game.turnDuration}
               turnStartedAt={game.turnStartedAt || Date.now()}
               isMyTurn={isMyTurn}
+              isPaused={isLoading && isMyTurn}
               onTimeout={handleTimeout}
             />
           )}

@@ -66,6 +66,7 @@ export async function POST(
     const gameStateResult = await getGameState(gameId);
     const game = gameStateResult?.game as Game | null;
     const players = (gameStateResult?.players || []) as GamePlayer[];
+    const existingGuesses = (gameStateResult?.guesses || []) as { playerId: string; word: string }[];
 
     if (!game) {
       return NextResponse.json(
@@ -95,6 +96,17 @@ export async function POST(
     if (game.currentTurnPlayerId !== playerId) {
       return NextResponse.json(
         { success: false, error: 'It is not your turn' },
+        { status: 400 }
+      );
+    }
+
+    // Check if player has already guessed this word
+    const alreadyGuessed = existingGuesses.some(
+      (g) => g.playerId === playerId && g.word.toLowerCase() === normalizedWord
+    );
+    if (alreadyGuessed) {
+      return NextResponse.json(
+        { success: false, error: 'You have already guessed this word' },
         { status: 400 }
       );
     }

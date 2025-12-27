@@ -7,6 +7,7 @@ interface TurnTimerProps {
   duration: number; // Total seconds for the turn
   turnStartedAt: number; // Timestamp when turn started
   isMyTurn: boolean;
+  isPaused?: boolean; // Pause timer while processing
   onTimeout?: () => void;
 }
 
@@ -14,6 +15,7 @@ export default function TurnTimer({
   duration,
   turnStartedAt,
   isMyTurn,
+  isPaused = false,
   onTimeout,
 }: TurnTimerProps) {
   const [timeLeft, setTimeLeft] = useState(duration);
@@ -31,6 +33,9 @@ export default function TurnTimer({
 
     setTimeLeft(calculateTimeLeft());
 
+    // Don't run interval if paused
+    if (isPaused) return;
+
     const interval = setInterval(() => {
       const remaining = calculateTimeLeft();
       setTimeLeft(remaining);
@@ -42,7 +47,7 @@ export default function TurnTimer({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [duration, turnStartedAt, onTimeout]);
+  }, [duration, turnStartedAt, onTimeout, isPaused]);
 
   // Calculate progress percentage
   const progress = (timeLeft / duration) * 100;
@@ -81,7 +86,7 @@ export default function TurnTimer({
 
       {/* Turn indicator text */}
       <p className="text-xs text-slate-500 text-center mt-1">
-        {isMyTurn ? 'Your turn' : "Opponent's turn"}
+        {isPaused ? 'Processing...' : isMyTurn ? 'Your turn' : "Opponent's turn"}
       </p>
     </div>
   );
