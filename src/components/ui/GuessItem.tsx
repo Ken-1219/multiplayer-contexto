@@ -24,7 +24,10 @@ export default function GuessItem({
   const { colors } = useTheme();
 
   // Calculate progress percentage for visual bar
-  const progressPercentage = Math.max(5, Math.min(95, ((maxDistance - distance) / maxDistance) * 100));
+  // For correct answers (distance === 1 or isCorrect), fill 100%
+  const progressPercentage = (isCorrect || distance === 1)
+    ? 100
+    : Math.max(5, Math.min(95, ((maxDistance - distance) / maxDistance) * 100));
 
   // Determine colors based on distance
   const getDistanceColors = () => {
@@ -162,7 +165,8 @@ export default function GuessItem({
           transition={{ delay: 0.1 }}
           className="px-3 py-1.5 rounded-md backdrop-blur-sm"
           style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+            backgroundColor: colors.cardBg,
+            border: `1px solid ${colors.cardBorder}`,
           }}
         >
           <span
